@@ -17,5 +17,8 @@
     "katex": "^0.18.1",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "astro-pagefind": "^2.0.1"
   }
 }
