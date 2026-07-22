@@ -1,0 +1,923 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DOMAINS } from '../../content.config';
+---
+
+<BaseLayout title="Dashboard — Knowledge Wiki">
+  <div id="dashboard-gate" data-state="loading">
+    <p class="gate-message">Checking access…</p>
+  </div>
+
+  <div id="dashboard" hidden>
+    <header class="dash-head">
+      <div>
+        <p class="dash-eyebrow">Dashboard</p>
+        <h1 id="dash-heading">Your workspace</h1>
+      </div>
+      <div class="dash-stats" id="dash-stats"></div>
+    </header>
+
+    <div class="dash-grid">
+      <section class="dash-card dash-card--capture">
+        <h2>Plant a seedling</h2>
+        <form id="seedling-form">
+          <input type="text" id="seedling-title" placeholder="Title" required maxlength="200" />
+          <select id="seedling-domain" required>
+            <option value="" disabled selected>Domain</option>
+            {DOMAINS.map((domain) => <option value={domain}>{domain}</option>)}
+          </select>
+          <textarea id="seedling-content" placeholder="What's the raw idea?" maxlength="4000"></textarea>
+          <button type="submit">Plant it</button>
+        </form>
+        <p id="seedling-status" class="form-status"></p>
+      </section>
+
+      <section class="dash-card dash-card--drafts">
+        <h2>Your drafts</h2>
+        <ul id="draft-list" class="draft-list"></ul>
+      </section>
+    </div>
+
+    <div id="admin-sections" hidden>
+      <div class="dash-divider">
+        <span>Moderation</span>
+      </div>
+
+      <div class="tab-bar" id="tab-bar" role="tablist">
+        <button type="button" class="tab-btn" data-tab="drafts" role="tab">
+          Publish <span class="tab-count" id="count-drafts"></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="revisions" role="tab">
+          Revisions <span class="tab-count" id="count-revisions"></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="roles" role="tab">
+          Roles <span class="tab-count" id="count-roles"></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="comments" role="tab">
+          Comments <span class="tab-count" id="count-comments"></span>
+        </button>
+        <button type="button" class="tab-btn" data-tab="audit" role="tab">
+          Audit log
+        </button>
+      </div>
+
+      <section class="tab-panel dash-card" data-panel="drafts">
+        <ul id="drafts-list" class="admin-list"></ul>
+      </section>
+
+      <section class="tab-panel dash-card" data-panel="revisions" hidden>
+        <ul id="revisions-list" class="admin-list"></ul>
+      </section>
+
+      <section class="tab-panel dash-card" data-panel="roles" hidden>
+        <ul id="role-requests-list" class="admin-list"></ul>
+      </section>
+
+      <section class="tab-panel dash-card" data-panel="comments" hidden>
+        <ul id="comments-list" class="admin-list"></ul>
+      </section>
+
+      <section class="tab-panel dash-card" data-panel="audit" hidden>
+        <ul id="audit-log-list" class="admin-list"></ul>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const gate = document.getElementById('dashboard-gate');
+  const dashboard = document.getElementById('dashboard');
+  const dashHeading = document.getElementById('dash-heading');
+  const dashStats = document.getElementById('dash-stats');
+  const adminSections = document.getElementById('admin-sections');
+
+  const seedlingForm = document.getElementById('seedling-form');
+  const seedlingTitle = document.getElementById('seedling-title');
+  const seedlingDomain = document.getElementById('seedling-domain');
+  const seedlingContent = document.getElementById('seedling-content');
+  const seedlingStatus = document.getElementById('seedling-status');
+  const draftList = document.getElementById('draft-list');
+
+  const draftsList = document.getElementById('drafts-list');
+  const revisionsList = document.getElementById('revisions-list');
+  const roleRequestsList = document.getElementById('role-requests-list');
+  const commentsList = document.getElementById('comments-list');
+  const auditLogList = document.getElementById('audit-log-list');
+
+  const tabBar = document.getElementById('tab-bar');
+
+  function emptyItem(text: string) {
+    const li = document.createElement('li');
+    li.className = 'admin-empty';
+    li.textContent = text;
+    return li;
+  }
+
+  function actionButton(label: string, onClick: () => void) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  }
+
+  function setStats(stats: Array<{ label: string; value: number }>) {
+    if (!dashStats) return;
+    dashStats.replaceChildren();
+    for (const stat of stats) {
+      const tile = document.createElement('div');
+      tile.className = 'stat-tile';
+      if (stat.value > 0) tile.classList.add('stat-tile--active');
+
+      const value = document.createElement('span');
+      value.className = 'stat-value';
+      value.textContent = String(stat.value);
+
+      const label = document.createElement('span');
+      label.className = 'stat-label';
+      label.textContent = stat.label;
+
+      tile.append(value, label);
+      dashStats.append(tile);
+    }
+  }
+
+  function setTabCount(id: string, count: number) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = count > 0 ? `[${count}]` : '';
+  }
+
+  function initTabs() {
+    if (!tabBar) return;
+    tabBar.addEventListener('click', (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest<HTMLButtonElement>('.tab-btn') : null;
+      if (!button) return;
+
+      const tabName = button.dataset.tab;
+      for (const btn of tabBar.querySelectorAll('.tab-btn')) {
+        btn.classList.toggle('tab-btn--active', btn === button);
+      }
+      for (const panel of document.querySelectorAll<HTMLElement>('.tab-panel')) {
+        panel.hidden = panel.dataset.panel !== tabName;
+      }
+    });
+
+    tabBar.querySelector<HTMLButtonElement>('.tab-btn')?.classList.add('tab-btn--active');
+  }
+
+  function showGateMessage(message: string, options: { requestButton?: boolean } = {}) {
+    if (!gate) return;
+    gate.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'gate-message';
+    p.textContent = message;
+    gate.append(p);
+
+    if (options.requestButton) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Request writer access';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        const response = await fetch('/api/role-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestedRole: 'writer' }),
+        });
+        const data = await response.json();
+        p.textContent = response.ok
+          ? 'Request submitted — an admin needs to approve it before you can write.'
+          : (data.error ?? 'Failed to submit request');
+      });
+      gate.append(button);
+    }
+  }
+
+  async function loadDrafts() {
+    if (!draftList) return 0;
+    const response = await fetch('/api/drafts');
+    const { drafts } = await response.json();
+    draftList.replaceChildren();
+
+    if (!drafts || drafts.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'draft-empty';
+      empty.textContent = 'No drafts yet — plant a seedling to get started.';
+      draftList.append(empty);
+      return 0;
+    }
+
+    for (const draft of drafts) {
+      const item = document.createElement('li');
+      item.className = 'draft-row';
+
+      const link = document.createElement('a');
+      link.href = `/write/${draft.id}`;
+      link.className = 'draft-title';
+      link.textContent = draft.title;
+
+      const meta = document.createElement('div');
+      meta.className = 'draft-meta';
+
+      const domain = document.createElement('span');
+      domain.className = 'pill';
+      domain.textContent = draft.domain;
+
+      const stage = document.createElement('span');
+      stage.className = 'growth-tag';
+      stage.textContent = `[${draft.growth_stage}]`;
+
+      const status = document.createElement('span');
+      status.className = 'pill pill--status';
+      status.textContent = draft.status.replace('_', ' ');
+
+      meta.append(domain, stage, status);
+      item.append(link, meta);
+
+      if (draft.status === 'pending_publish') {
+        const withdrawBtn = document.createElement('button');
+        withdrawBtn.type = 'button';
+        withdrawBtn.className = 'draft-delete';
+        withdrawBtn.textContent = 'Withdraw';
+        withdrawBtn.addEventListener('click', async () => {
+          if (!confirm(`Withdraw "${draft.title}" from publish review? You can edit or resubmit it after.`)) return;
+          const res = await fetch(`/api/drafts/${draft.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'draft' }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error ?? 'Failed to withdraw draft');
+            return;
+          }
+          await loadDrafts();
+        });
+        item.append(withdrawBtn);
+      } else {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'draft-delete';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', async () => {
+          if (!confirm(`Delete "${draft.title}"? This can't be undone.`)) return;
+          const res = await fetch(`/api/drafts/${draft.id}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.error ?? 'Failed to delete draft');
+            return;
+          }
+          const count = await loadDrafts();
+          if (adminSections?.hasAttribute('hidden')) {
+            setStats([{ label: 'Your drafts', value: count }]);
+          }
+        });
+        item.append(deleteBtn);
+      }
+      draftList.append(item);
+    }
+    return drafts.length;
+  }
+
+  async function loadAdminDrafts() {
+    if (!draftsList) return 0;
+    const response = await fetch('/api/admin/drafts');
+    const { drafts } = await response.json();
+    draftsList.replaceChildren();
+
+    if (!drafts || drafts.length === 0) {
+      draftsList.append(emptyItem('Nothing awaiting publish.'));
+      return 0;
+    }
+
+    for (const draft of drafts) {
+      const item = document.createElement('li');
+      item.className = 'admin-row';
+
+      const meta = document.createElement('div');
+      meta.className = 'admin-row-meta';
+      const title = document.createElement('span');
+      title.className = 'admin-row-title';
+      title.textContent = draft.title;
+      const sub = document.createElement('span');
+      sub.className = 'admin-row-sub';
+      sub.textContent = `${draft.domain} · ${draft.growth_stage} · by ${draft.users?.github_username ?? 'unknown'}`;
+      meta.append(title, sub);
+
+      const publish = actionButton('Publish', async () => {
+        const res = await fetch(`/api/admin/drafts/${draft.id}/publish`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error ?? 'Failed to publish');
+          return;
+        }
+        await refreshAdmin();
+      });
+
+      const reject = actionButton('Reject', async () => {
+        if (!confirm(`Reject "${draft.title}"? It goes back to the writer as a draft.`)) return;
+        const res = await fetch(`/api/admin/drafts/${draft.id}/reject`, { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error ?? 'Failed to reject');
+          return;
+        }
+        await refreshAdmin();
+      });
+
+      const actions = document.createElement('div');
+      actions.className = 'admin-row-actions';
+      actions.append(publish, reject);
+
+      item.append(meta, actions);
+      draftsList.append(item);
+    }
+    return drafts.length;
+  }
+
+  async function loadRevisions() {
+    if (!revisionsList) return 0;
+    const response = await fetch('/api/admin/pending-revisions');
+    const { pendingRevisions } = await response.json();
+    revisionsList.replaceChildren();
+
+    if (!pendingRevisions || pendingRevisions.length === 0) {
+      revisionsList.append(emptyItem('No revisions awaiting review.'));
+      return 0;
+    }
+
+    for (const revision of pendingRevisions) {
+      const item = document.createElement('li');
+      item.className = 'admin-row';
+      const meta = document.createElement('span');
+      meta.textContent = `${revision.note_id} · by ${revision.users?.github_username ?? 'unknown'}`;
+      item.append(meta);
+      revisionsList.append(item);
+    }
+    return pendingRevisions.length;
+  }
+
+  async function loadRoleRequests() {
+    if (!roleRequestsList) return 0;
+    const response = await fetch('/api/admin/role-requests');
+    const { roleRequests } = await response.json();
+    roleRequestsList.replaceChildren();
+
+    if (!roleRequests || roleRequests.length === 0) {
+      roleRequestsList.append(emptyItem('No pending role requests.'));
+      return 0;
+    }
+
+    for (const roleRequest of roleRequests) {
+      const item = document.createElement('li');
+      item.className = 'admin-row';
+
+      const meta = document.createElement('span');
+      meta.textContent = `${roleRequest.users?.github_username ?? 'unknown'} wants ${roleRequest.requested_role}`;
+
+      const decide = async (decision: 'approved' | 'denied') => {
+        const res = await fetch(`/api/admin/role-requests/${roleRequest.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error ?? 'Failed to update role request');
+          return;
+        }
+        await refreshAdmin();
+      };
+
+      const approve = actionButton('Approve', () => decide('approved'));
+      const deny = actionButton('Deny', () => decide('denied'));
+
+      item.append(meta, approve, deny);
+      roleRequestsList.append(item);
+    }
+    return roleRequests.length;
+  }
+
+  async function loadComments() {
+    if (!commentsList) return 0;
+    const response = await fetch('/api/admin/comments');
+    const { comments } = await response.json();
+    commentsList.replaceChildren();
+
+    if (!comments || comments.length === 0) {
+      commentsList.append(emptyItem('No comments need review.'));
+      return 0;
+    }
+
+    for (const comment of comments) {
+      const item = document.createElement('li');
+      item.className = 'admin-row admin-row-wrap';
+
+      const meta = document.createElement('div');
+      meta.className = 'admin-row-meta';
+      const author = document.createElement('span');
+      author.className = 'admin-row-sub';
+      author.textContent = `${comment.users?.github_username ?? 'unknown'} on ${comment.note_id} · ${comment.status}`;
+      const body = document.createElement('p');
+      body.className = 'admin-row-body';
+      body.textContent = comment.content;
+      meta.append(author, body);
+
+      const decide = async (decision: 'approved' | 'flagged') => {
+        const res = await fetch(`/api/admin/comments/${comment.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error ?? 'Failed to update comment');
+          return;
+        }
+        await refreshAdmin();
+      };
+
+      const approve = actionButton('Approve', () => decide('approved'));
+      const flag = actionButton('Flag', () => decide('flagged'));
+
+      item.append(meta, approve, flag);
+      commentsList.append(item);
+    }
+    return comments.length;
+  }
+
+  async function loadAuditLog() {
+    if (!auditLogList) return;
+    const response = await fetch('/api/admin/audit-log');
+    const { auditLog } = await response.json();
+    auditLogList.replaceChildren();
+
+    if (!auditLog || auditLog.length === 0) {
+      auditLogList.append(emptyItem('No activity yet.'));
+      return;
+    }
+
+    for (const entry of auditLog) {
+      const item = document.createElement('li');
+      item.className = 'admin-row';
+      const meta = document.createElement('span');
+      const when = new Date(entry.created_at).toLocaleString();
+      meta.textContent = `${when} · ${entry.users?.github_username ?? 'unknown'} · ${entry.action} · ${entry.target}`;
+      item.append(meta);
+      auditLogList.append(item);
+    }
+  }
+
+  async function refreshAdmin() {
+    const [draftsCount, revisionsCount, rolesCount, commentsCount] = await Promise.all([
+      loadAdminDrafts(),
+      loadRevisions(),
+      loadRoleRequests(),
+      loadComments(),
+    ]);
+    await loadAuditLog();
+
+    setTabCount('count-drafts', draftsCount);
+    setTabCount('count-revisions', revisionsCount);
+    setTabCount('count-roles', rolesCount);
+    setTabCount('count-comments', commentsCount);
+
+    setStats([
+      { label: 'Awaiting publish', value: draftsCount },
+      { label: 'Pending revisions', value: revisionsCount },
+      { label: 'Role requests', value: rolesCount },
+      { label: 'Flagged comments', value: commentsCount },
+    ]);
+  }
+
+  async function init() {
+    const sessionResponse = await fetch('/api/session');
+    const { user } = await sessionResponse.json();
+
+    if (!user) {
+      showGateMessage('Log in to access the dashboard.');
+      return;
+    }
+
+    if (user.role !== 'writer' && user.role !== 'admin') {
+      showGateMessage("You're signed in as a reader.", { requestButton: true });
+      return;
+    }
+
+    gate?.remove();
+    dashboard?.removeAttribute('hidden');
+    if (dashHeading) {
+      dashHeading.textContent = user.role === 'admin' ? 'Admin workspace' : 'Writer workspace';
+    }
+
+    const draftsCount = await loadDrafts();
+
+    if (user.role === 'admin') {
+      adminSections?.removeAttribute('hidden');
+      initTabs();
+      await refreshAdmin();
+    } else {
+      setStats([{ label: 'Your drafts', value: draftsCount }]);
+    }
+  }
+
+  seedlingForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (
+      !(seedlingTitle instanceof HTMLInputElement) ||
+      !(seedlingDomain instanceof HTMLSelectElement) ||
+      !(seedlingContent instanceof HTMLTextAreaElement) ||
+      !seedlingStatus
+    ) {
+      return;
+    }
+
+    seedlingStatus.textContent = 'Planting…';
+    try {
+      const response = await fetch('/api/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: seedlingTitle.value,
+          domain: seedlingDomain.value,
+          content: seedlingContent.value,
+          growthStage: 'seedling',
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Failed to create draft');
+
+      seedlingTitle.value = '';
+      seedlingDomain.value = '';
+      seedlingContent.value = '';
+      seedlingStatus.textContent = 'Planted.';
+      const count = await loadDrafts();
+      if (!adminSections?.hasAttribute('hidden')) return;
+      setStats([{ label: 'Your drafts', value: count }]);
+    } catch (error) {
+      seedlingStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
+    }
+  });
+
+  init();
+</script>
+
+<style is:global>
+  .gate-message {
+    color: var(--color-muted);
+  }
+
+  .dash-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .dash-eyebrow {
+    margin: 0 0 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+  }
+
+  .dash-head h1 {
+    margin: 0;
+  }
+
+  .dash-stats {
+    display: flex;
+    gap: 1.75rem;
+  }
+
+  .stat-tile {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--color-muted);
+    line-height: 1;
+  }
+
+  .stat-tile--active .stat-value {
+    color: var(--brand-red);
+  }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+  }
+
+  .dash-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 380px) 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 760px) {
+    .dash-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .dash-card {
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
+  }
+
+  .dash-card h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
+  }
+
+  #seedling-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  #seedling-form input,
+  #seedling-form select,
+  #seedling-form textarea {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  #seedling-form textarea {
+    min-height: 4rem;
+    resize: vertical;
+  }
+
+  #seedling-form button {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  #seedling-form button:hover {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+  }
+
+  .form-status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    min-height: 1em;
+  }
+
+  .draft-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 26rem;
+    overflow-y: auto;
+  }
+
+  .draft-empty {
+    color: var(--color-muted);
+  }
+
+  .draft-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .draft-row:last-child {
+    border-bottom: none;
+  }
+
+  .draft-title {
+    font-family: var(--font-display);
+    text-decoration: none;
+    color: var(--color-fg);
+  }
+
+  .draft-title:hover {
+    color: var(--brand-red);
+  }
+
+  .draft-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+  }
+
+  .draft-delete {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--color-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .draft-delete:hover {
+    color: var(--brand-red);
+  }
+
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    padding: 0.15em 0.5em;
+  }
+
+  .pill--status {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .growth-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  .dash-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 3rem 0 1.5rem;
+  }
+
+  .dash-divider::before,
+  .dash-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+  }
+
+  .dash-divider span {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+  }
+
+  .tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tab-btn {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: none;
+    border: none;
+    padding: 0.75rem 0;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+
+  .tab-btn:hover {
+    color: var(--color-fg);
+  }
+
+  .tab-btn--active {
+    color: var(--color-fg);
+    border-bottom-color: var(--brand-red);
+  }
+
+  .tab-count {
+    color: var(--brand-red);
+  }
+
+  .tab-panel {
+    border-top: none;
+  }
+
+  .admin-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .admin-empty {
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    padding: 0.6rem 0;
+  }
+
+  .admin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-row:last-child {
+    border-bottom: none;
+  }
+
+  .admin-row-wrap {
+    align-items: flex-start;
+  }
+
+  .admin-row-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .admin-row-title {
+    font-family: var(--font-display);
+  }
+
+  .admin-row-sub {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .admin-row-body {
+    margin: 0.3rem 0 0;
+    font-size: 0.9rem;
+  }
+
+  .admin-row-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .admin-row button {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--color-fg);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .admin-row button:hover {
+    border-color: var(--brand-red);
+    color: var(--brand-red);
+  }
+</style>

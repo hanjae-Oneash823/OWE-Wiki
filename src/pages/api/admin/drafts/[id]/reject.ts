@@ -1,0 +1,34 @@
+export const prerender = false;
+
+import type { APIRoute } from 'astro';
+import { createSupabaseServerClient } from '../../../../../lib/supabase/server';
+import { getUserRole, isAdmin } from '../../../../../lib/supabase/roles';
+import { recordAuditLog } from '../../../../../lib/supabase/auditLog';
+
+export const POST: APIRoute = async ({ cookies, params, request }) => {
+  const supabase = createSupabaseServerClient(request, cookies);
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return new Response(JSON.stringify({ error: 'Not signed in' }), { status: 401 });
+
+  const role = await getUserRole(supabase, userData.user.id);
+  if (!isAdmin(role)) return new Response(JSON.stringify({ error: 'Admin access required' }), { status: 403 });
+
+  const { data: draft, error: fetchError } = await supabase
+    .from('drafts')
+    .select('id, domain, slug, status')
+    .eq('id', params.id)
+    .maybeSingle();
+
+  if (fetchError) return new Response(JSON.stringify({ error: fetchError.message }), { status: 400 });
+  if (!draft) return new Response(JSON.stringify({ error: 'Draft not found' }), { status: 404 });
+  if (draft.status !== 'pending_publish') {
+    return new Response(JSON.stringify({ error: 'Draft is not awaiting publish' }), { status: 409 });
+  }
+
+  const { error: updateError } = await supabase.from('drafts').update({ status: 'draft' }).eq('id', draft.id);
+  if (updateError) return new Response(JSON.stringify({ error: updateError.message }), { status: 400 });
+
+  await recordAuditLog(supabase, userData.user.id, 'reject_draft', `${draft.domain}/${draft.slug}`);
+
+  return new Response(JSON.stringify({ ok: true }), { headers: { 'Content-Type': 'application/json' } });
+};
