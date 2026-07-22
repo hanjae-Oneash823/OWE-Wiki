@@ -2,8 +2,10 @@
 export const prerender = true;
 
 import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import NoteRow from '../components/NoteRow.astro';
+import darwinTree from '../assets/darwin-tree.png';
 import { DOMAINS } from '../content.config';
 
 const notes = await getCollection('notes');
@@ -14,17 +16,53 @@ const recentNotes = [...notes]
 const domainCounts = Object.fromEntries(
   DOMAINS.map((domain) => [domain, notes.filter((note) => note.data.domain === domain).length])
 );
+
+const descendantText =
+  'One of four descendant lines Darwin sketched from a shared ancestor — his first attempt at drawing evolution as a branching tree instead of a ladder.';
+
+const heroHotspots = [
+  { id: 'root', x: 33.5, y: 87, label: 'The common ancestor', text: 'The common ancestor — every line below traces back to this point.' },
+  { id: 'a', x: 79.6, y: 91.7, label: 'Descendant line A', text: descendantText },
+  { id: 'b', x: 43.5, y: 29, label: 'Descendant line B', text: descendantText },
+  { id: 'c', x: 51.1, y: 38.6, label: 'Descendant line C', text: descendantText },
+  { id: 'd', x: 15.5, y: 41, label: 'Descendant line D', text: descendantText },
+];
 ---
 
 <BaseLayout title="One With Everything wiki">
-  <h1 class="site-name">
-    <span class="site-name__owe">One With Everything</span>
-    <span class="site-name__wiki">wiki</span>
-  </h1>
-  <p>
-    A living knowledge base for coding, bioinformatics, biology, and ML/DL/AI &mdash;
-    organized by growth stage instead of "finished" status. Seedlings welcome.
-  </p>
+  <section class="hero">
+    <div class="hero-text">
+      <h1 class="site-name">
+        <span class="site-name__owe">One With Everything</span>
+        <span class="site-name__wiki">wiki</span>
+      </h1>
+      <p class="hero-tagline">Every note starts as a sketch in a notebook.</p>
+      <p class="hero-body">
+        An ongoing archive for turning half-formed understanding into knowledge someone else
+        can actually use &mdash; organized by growth stage instead of "finished" status.
+        Seedlings welcome.
+      </p>
+    </div>
+    <figure class="hero-figure">
+      <div class="hero-figure-frame">
+        <Image
+          src={darwinTree}
+          alt="Charles Darwin's 1837 sketch of a branching tree of life, captioned &quot;I think,&quot; from his First Notebook on Transmutation of Species"
+          width={695}
+          height={630}
+        />
+        {heroHotspots.map((spot) => (
+          <div class="hotspot-wrap" style={`left:${spot.x}%; top:${spot.y}%`}>
+            <button class="hotspot" type="button" aria-label={spot.label}>
+              <span aria-hidden="true">+</span>
+            </button>
+            <span class="hotspot-tooltip" role="tooltip">{spot.text}</span>
+          </div>
+        ))}
+      </div>
+      <figcaption>Charles Darwin, Notebook B, 1837<br />the first sketch of the tree of life</figcaption>
+    </figure>
+  </section>
 
   <div class="home-grid">
     <section>
@@ -55,6 +93,14 @@ const domainCounts = Object.fromEntries(
 </BaseLayout>
 
 <style>
+  .hero {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 3.5rem;
+    align-items: center;
+    margin-bottom: 3.5rem;
+  }
+
   .site-name {
     font-family: 'Marion', Georgia, serif;
     font-weight: 700;
@@ -72,6 +118,144 @@ const domainCounts = Object.fromEntries(
     color: var(--brand-dark-red);
     font-style: italic;
     font-weight: 500;
+  }
+
+  .hero-tagline {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    margin: 1.25rem 0 0.75rem;
+  }
+
+  .hero-body {
+    color: var(--color-muted);
+    max-width: 46ch;
+  }
+
+  .hero-figure {
+    margin: 0;
+    justify-self: center;
+  }
+
+  .hero-figure-frame {
+    position: relative;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .hero-figure-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    mix-blend-mode: multiply;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hero-figure-frame img {
+      filter: invert(1);
+      mix-blend-mode: screen;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-figure-frame img {
+      animation: hero-grow 1.4s ease-out both;
+    }
+
+    .hotspot-wrap {
+      opacity: 0;
+      animation: hero-hotspot-in 0.5s ease-out 1.3s both;
+    }
+  }
+
+  @keyframes hero-grow {
+    from {
+      clip-path: inset(100% 0 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes hero-hotspot-in {
+    to {
+      opacity: 1;
+    }
+  }
+
+  .hotspot-wrap {
+    position: absolute;
+    transform: translate(-50%, -50%);
+  }
+
+  .hotspot {
+    width: 1.1rem;
+    height: 1.1rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--brand-red);
+    background: var(--color-bg);
+    color: var(--brand-red);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .hotspot:hover,
+  .hotspot:focus-visible {
+    background: var(--brand-red);
+    color: var(--color-bg);
+  }
+
+  .hotspot-tooltip {
+    position: absolute;
+    bottom: 140%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 220px;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-fg);
+    color: var(--color-bg);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-radius: var(--radius);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 1;
+  }
+
+  .hotspot-wrap:hover .hotspot-tooltip,
+  .hotspot:focus-visible + .hotspot-tooltip {
+    opacity: 1;
+  }
+
+  .hero-figure figcaption {
+    margin-top: 0.6rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .hero-figure {
+      order: -1;
+      max-width: 220px;
+      margin: 0 auto;
+    }
   }
 
   .home-grid {
