@@ -54,12 +54,34 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
   const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
   const authStatus = document.getElementById('auth-status');
 
+  function renderLoginButton() {
+    if (!authStatus) return;
+    const loginButton = document.createElement('button');
+    loginButton.type = 'button';
+    loginButton.className = 'auth-link';
+    loginButton.textContent = 'Log in';
+    loginButton.addEventListener('click', () => {
+      supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    });
+    authStatus.replaceChildren(loginButton);
+  }
+
   async function renderAuthStatus() {
     if (!authStatus) return;
-    const response = await fetch('/api/session');
-    const { user } = await response.json();
 
-    if (user) {
+    try {
+      const response = await fetch('/api/session');
+      if (!response.ok) throw new Error(`Session check failed: ${response.status}`);
+      const { user } = await response.json();
+
+      if (!user) {
+        renderLoginButton();
+        return;
+      }
+
       const username = document.createElement('span');
       username.className = 'auth-username';
       username.textContent = user.username ?? 'Account';
@@ -74,18 +96,9 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
       form.append(logoutButton);
 
       authStatus.replaceChildren(username, form);
-    } else {
-      const loginButton = document.createElement('button');
-      loginButton.type = 'button';
-      loginButton.className = 'auth-link';
-      loginButton.textContent = 'Log in';
-      loginButton.addEventListener('click', () => {
-        supabase.auth.signInWithOAuth({
-          provider: 'github',
-          options: { redirectTo: `${window.location.origin}/auth/callback` },
-        });
-      });
-      authStatus.replaceChildren(loginButton);
+    } catch (error) {
+      console.error('Failed to load auth status', error);
+      renderLoginButton();
     }
   }
 
