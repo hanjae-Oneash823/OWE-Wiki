@@ -4,41 +4,18 @@ interface Props {
 }
 
 const { stage } = Astro.props;
-
-const ICONS: Record<Props['stage'], string> = {
-  seedling: '🧬',
-  sprout: '🌱',
-  established: '🌳',
-};
 ---
 
-<span class={`growth-badge growth-badge--${stage}`}>
-  <span aria-hidden="true">{ICONS[stage]}</span>
-  {stage}
-</span>
+<span class="growth-tag">[{stage}]</span>
 
 <style>
-  .growth-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    text-transform: capitalize;
-    border: 1px solid currentColor;
-  }
-
-  .growth-badge--seedling {
-    color: var(--stage-seedling);
-  }
-
-  .growth-badge--sprout {
-    color: var(--stage-sprout);
-  }
-
-  .growth-badge--established {
-    color: var(--stage-established);
+  .growth-tag {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
   }
 </style>
