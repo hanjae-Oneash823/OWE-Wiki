@@ -1,0 +1,16 @@
+---
+title: Immutability
+description: Why creating new objects instead of mutating existing ones prevents an entire class of bugs.
+domain: coding
+growthStage: seedling
+tags: [functional-programming, data-structures]
+relatedNotes: []
+publishedDate: 2026-07-22
+---
+
+Mutating shared state in place makes it hard to reason about who changed what, and when.
+Preferring `update(original, field, value) → new copy` over `modify(original, field, value)`
+in place keeps changes local and traceable.
+
+Worth expanding later: how this interacts with garbage collection cost, and where mutation
+is still the pragmatic choice (tight loops, large buffers).

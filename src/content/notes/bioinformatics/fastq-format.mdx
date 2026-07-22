@@ -1,0 +1,22 @@
+---
+title: FASTQ Format
+description: The four-line-per-read text format used to store raw sequencing reads and quality scores.
+domain: bioinformatics
+growthStage: sprout
+tags: [sequencing, file-formats]
+relatedNotes: []
+publishedDate: 2026-07-22
+---
+
+Each read is four lines:
+
+1. `@` + read identifier
+2. the raw sequence (A/C/G/T/N)
+3. `+` (optionally repeating the identifier)
+4. ASCII-encoded quality scores, one character per base
+
+Quality scores use Phred encoding: $Q = -10 \log_{10} P$, where $P$ is the estimated
+probability the base call is wrong. Most modern platforms use Phred+33 offset, so
+`!` (ASCII 33) represents $Q = 0$.
+
+Related tools to cover later: `fastqc`, `seqkit`, `cutadapt`.

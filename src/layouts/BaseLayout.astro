@@ -1,0 +1,136 @@
+---
+import 'katex/dist/katex.min.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'A living knowledge base for coding, bioinformatics, biology, and ML/DL/AI.' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="site-title" href="/">Knowledge Wiki</a>
+      <nav>
+        <a href="/domain/coding">Coding</a>
+        <a href="/domain/bioinformatics">Bioinformatics</a>
+        <a href="/domain/biology">Biology</a>
+        <a href="/domain/ml-dl-ai">ML/DL/AI</a>
+      </nav>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <p>Growth-stage knowledge base &mdash; seedlings welcome.</p>
+    </footer>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: light dark;
+    --color-bg: #ffffff;
+    --color-fg: #1a1a1a;
+    --color-muted: #666666;
+    --color-border: #e2e2e2;
+    --color-accent: #2f6f4f;
+
+    --domain-coding: #3b6ea5;
+    --domain-bioinformatics: #2f8f6f;
+    --domain-biology: #6f8f2f;
+    --domain-ml-dl-ai: #8f4f9f;
+
+    --stage-seedling: #8a6d3b;
+    --stage-sprout: #4a8f4a;
+    --stage-established: #2f6f4f;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-bg: #14171a;
+      --color-fg: #e8e8e8;
+      --color-muted: #9a9a9a;
+      --color-border: #2a2e33;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    line-height: 1.6;
+  }
+
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-title {
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--color-fg);
+  }
+
+  .site-header nav {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .site-header nav a {
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .site-header nav a:hover {
+    color: var(--color-fg);
+  }
+
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .site-footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+
+  code {
+    background: color-mix(in srgb, var(--color-fg) 8%, transparent);
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  pre code {
+    background: none;
+    padding: 0;
+  }
+</style>

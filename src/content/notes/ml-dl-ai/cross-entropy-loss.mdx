@@ -1,0 +1,22 @@
+---
+title: Cross-Entropy Loss
+description: The standard loss function for classification — measures divergence between predicted and true label distributions.
+domain: ml-dl-ai
+growthStage: seedling
+tags: [loss-functions, classification]
+relatedNotes: []
+publishedDate: 2026-07-22
+---
+
+For a single example with true class $y$ and predicted probability distribution
+$\hat{p}$ over $C$ classes:
+
+$$
+L = -\sum_{c=1}^{C} y_c \log(\hat{p}_c)
+$$
+
+Since $y$ is one-hot, this collapses to $-\log(\hat{p}_{\text{true class}})$ — the loss
+only cares about the predicted probability assigned to the correct class, penalizing
+confident wrong answers heavily.
+
+To expand: relationship to KL divergence, label smoothing, and why it pairs with softmax.

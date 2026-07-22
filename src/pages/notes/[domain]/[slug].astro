@@ -1,0 +1,95 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import GrowthBadge from '../../../components/GrowthBadge.astro';
+import { getNoteSlug } from '../../../content.config';
+
+export async function getStaticPaths() {
+  const notes = await getCollection('notes');
+  return notes.map((note) => ({
+    params: { domain: note.data.domain, slug: getNoteSlug(note.id, note.data.domain) },
+    props: { note },
+  }));
+}
+
+const { note } = Astro.props;
+const { Content } = await render(note);
+
+const allNotes = await getCollection('notes');
+const related = allNotes.filter((n) =>
+  note.data.relatedNotes.includes(getNoteSlug(n.id, n.data.domain))
+);
+---
+
+<BaseLayout title={`${note.data.title} — Knowledge Wiki`} description={note.data.description}>
+  <p><a href={`/domain/${note.data.domain}`}>&larr; {note.data.domain}</a></p>
+
+  <header class="note-header">
+    <h1>{note.data.title}</h1>
+    <div class="note-meta">
+      <GrowthBadge stage={note.data.growthStage} />
+      <span class="domain-tag">{note.data.domain}</span>
+    </div>
+    {note.data.tags.length > 0 && (
+      <ul class="tag-list">
+        {note.data.tags.map((tag) => (
+          <li>#{tag}</li>
+        ))}
+      </ul>
+    )}
+  </header>
+
+  <article class="note-content">
+    <Content />
+  </article>
+
+  {related.length > 0 && (
+    <section class="related">
+      <h2>Related notes</h2>
+      <ul>
+        {related.map((r) => (
+          <li><a href={`/notes/${r.data.domain}/${getNoteSlug(r.id, r.data.domain)}`}>{r.data.title}</a></li>
+        ))}
+      </ul>
+    </section>
+  )}
+</BaseLayout>
+
+<style>
+  .note-header {
+    margin-bottom: 2rem;
+  }
+
+  .note-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.5rem 0;
+  }
+
+  .domain-tag {
+    text-transform: capitalize;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+
+  .tag-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0 0;
+  }
+
+  .tag-list li {
+    font-size: 0.8rem;
+    color: var(--color-muted);
+  }
+
+  .related {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+</style>

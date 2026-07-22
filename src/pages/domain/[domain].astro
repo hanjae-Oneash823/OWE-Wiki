@@ -1,0 +1,56 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GrowthBadge from '../../components/GrowthBadge.astro';
+import { DOMAINS, getNoteSlug } from '../../content.config';
+
+export async function getStaticPaths() {
+  return DOMAINS.map((domain) => ({ params: { domain } }));
+}
+
+const { domain } = Astro.params;
+const allNotes = await getCollection('notes');
+const notes = allNotes
+  .filter((note) => note.data.domain === domain)
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout title={`${domain} — Knowledge Wiki`}>
+  <p><a href="/">&larr; All domains</a></p>
+  <h1 class="domain-heading">{domain}</h1>
+
+  {notes.length === 0 ? (
+    <p>No notes in this domain yet.</p>
+  ) : (
+    <ul class="note-list">
+      {notes.map((note) => (
+        <li>
+          <a href={`/notes/${note.data.domain}/${getNoteSlug(note.id, note.data.domain)}`}>{note.data.title}</a>
+          <GrowthBadge stage={note.data.growthStage} />
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>
+
+<style>
+  .domain-heading {
+    text-transform: capitalize;
+  }
+
+  .note-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .note-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+</style>
