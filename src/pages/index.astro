@@ -14,40 +14,76 @@ const domainCounts = Object.fromEntries(
 );
 ---
 
-<BaseLayout title="Knowledge Wiki">
-  <h1>Knowledge Wiki</h1>
+<BaseLayout title="One With Everything wiki">
+  <h1 class="site-name">
+    <span class="site-name__owe">One With Everything</span>
+    <span class="site-name__wiki">wiki</span>
+  </h1>
   <p>
     A living knowledge base for coding, bioinformatics, biology, and ML/DL/AI &mdash;
     organized by growth stage instead of "finished" status. Seedlings welcome.
   </p>
 
-  <section>
-    <h2>Domains</h2>
-    <ul class="domain-list">
-      {DOMAINS.map((domain) => (
-        <li class="domain-row">
-          <a href={`/domain/${domain}`}>{domain}</a>
-          <span class="count">{String(domainCounts[domain]).padStart(2, '0')}</span>
-        </li>
-      ))}
-    </ul>
-  </section>
-
-  <section>
-    <h2>Recently updated</h2>
-    {recentNotes.length === 0 ? (
-      <p>No notes yet &mdash; plant the first seedling.</p>
-    ) : (
-      <ul class="note-list">
-        {recentNotes.map((note) => (
-          <NoteRow note={note} />
+  <div class="home-grid">
+    <section>
+      <h2>Domains</h2>
+      <ul class="domain-list">
+        {DOMAINS.map((domain) => (
+          <li class="domain-row">
+            <a href={`/domain/${domain}`}>{domain}</a>
+            <span class="count">{String(domainCounts[domain]).padStart(2, '0')}</span>
+          </li>
         ))}
       </ul>
-    )}
-  </section>
+    </section>
+
+    <section>
+      <h2>Recently updated</h2>
+      {recentNotes.length === 0 ? (
+        <p>No notes yet &mdash; plant the first seedling.</p>
+      ) : (
+        <ul class="note-list">
+          {recentNotes.map((note) => (
+            <NoteRow note={note} />
+          ))}
+        </ul>
+      )}
+    </section>
+  </div>
 </BaseLayout>
 
 <style>
+  .site-name {
+    font-family: 'Marion', Georgia, serif;
+    font-weight: 700;
+    font-size: 2.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .site-name__owe {
+    color: var(--brand-red);
+  }
+
+  .site-name__wiki {
+    color: var(--brand-dark-red);
+    font-style: italic;
+    font-weight: 500;
+  }
+
+  .home-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    .home-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+
   .domain-list,
   .note-list {
     list-style: none;
