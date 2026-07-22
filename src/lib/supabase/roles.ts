@@ -10,3 +10,7 @@ export async function getUserRole(supabase: SupabaseClient, userId: string): Pro
 export function canWrite(role: UserRole | null): boolean {
   return role === 'writer' || role === 'admin';
 }
+
+export function isAdmin(role: UserRole | null): boolean {
+  return role === 'admin';
+}
