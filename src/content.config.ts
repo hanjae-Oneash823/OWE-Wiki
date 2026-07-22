@@ -7,6 +7,8 @@ const GROWTH_STAGES = ['seedling', 'sprout', 'established'] as const;
 const notes = defineCollection({
   loader: glob({ pattern: '**/*.mdx', base: './src/content/notes' }),
   schema: z.object({
+    // Stable identifier for bookmarks/comments - set once, never changed even if the slug is renamed.
+    noteId: z.string().uuid(),
     title: z.string(),
     description: z.string().optional(),
     domain: z.enum(DOMAINS),

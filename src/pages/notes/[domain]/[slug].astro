@@ -31,6 +31,7 @@ const related = allNotes.filter((n) =>
     <div class="note-meta">
       <GrowthBadge stage={note.data.growthStage} />
       <span class="domain-tag">{note.data.domain}</span>
+      <button id="bookmark-btn" class="bookmark-btn" data-note-id={note.data.noteId}>☆ Bookmark</button>
     </div>
     {note.data.tags.length > 0 && (
       <ul class="tag-list">
@@ -55,7 +56,137 @@ const related = allNotes.filter((n) =>
       </ul>
     </section>
   )}
+
+  <section class="comments" data-note-id={note.data.noteId}>
+    <h2>Comments</h2>
+    <div id="comment-list" class="comment-list"></div>
+    <form id="comment-form" class="comment-form">
+      <textarea id="comment-input" class="comment-input" placeholder="Add a comment…" required maxlength="2000"></textarea>
+      <button type="submit" class="comment-submit">Post comment</button>
+    </form>
+    <p id="comment-status" class="comment-status"></p>
+  </section>
 </BaseLayout>
+
+<script>
+  const noteId = document.querySelector('[data-note-id]')?.getAttribute('data-note-id') ?? null;
+  const bookmarkBtn = document.getElementById('bookmark-btn');
+  const commentList = document.getElementById('comment-list');
+  const commentForm = document.getElementById('comment-form');
+  const commentInput = document.getElementById('comment-input');
+  const commentStatus = document.getElementById('comment-status');
+
+  async function getSessionUser() {
+    const response = await fetch('/api/session');
+    const { user } = await response.json();
+    return user;
+  }
+
+  function setBookmarkState(bookmarked) {
+    if (!(bookmarkBtn instanceof HTMLButtonElement)) return;
+    bookmarkBtn.dataset.bookmarked = String(bookmarked);
+    bookmarkBtn.textContent = bookmarked ? '★ Bookmarked' : '☆ Bookmark';
+  }
+
+  async function initBookmark() {
+    if (!(bookmarkBtn instanceof HTMLButtonElement) || !noteId) return;
+
+    const user = await getSessionUser();
+    if (!user) {
+      bookmarkBtn.disabled = true;
+      bookmarkBtn.title = 'Log in to bookmark this note';
+      return;
+    }
+
+    const statusResponse = await fetch(`/api/bookmarks?noteId=${encodeURIComponent(noteId)}`);
+    const { bookmarked } = await statusResponse.json();
+    setBookmarkState(bookmarked);
+
+    bookmarkBtn.addEventListener('click', async () => {
+      const isBookmarked = bookmarkBtn.dataset.bookmarked === 'true';
+      const response = await fetch('/api/bookmarks', {
+        method: isBookmarked ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteId }),
+      });
+      const data = await response.json();
+      setBookmarkState(data.bookmarked);
+    });
+  }
+
+  async function loadComments() {
+    if (!commentList || !noteId) return;
+    const response = await fetch(`/api/comments?noteId=${encodeURIComponent(noteId)}`);
+    const { comments } = await response.json();
+    commentList.replaceChildren();
+
+    if (!comments || comments.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'comment-empty';
+      empty.textContent = 'No comments yet.';
+      commentList.append(empty);
+      return;
+    }
+
+    for (const comment of comments) {
+      const item = document.createElement('div');
+      item.className = 'comment-item';
+
+      const meta = document.createElement('p');
+      meta.className = 'comment-meta';
+      const author = comment.users?.github_username ?? 'unknown';
+      const date = new Date(comment.created_at).toISOString().slice(0, 10);
+      meta.textContent = `${author} · ${date}`;
+
+      const body = document.createElement('p');
+      body.className = 'comment-body';
+      body.textContent = comment.content;
+
+      item.append(meta, body);
+      commentList.append(item);
+    }
+  }
+
+  async function initCommentForm() {
+    if (!(commentForm instanceof HTMLFormElement) || !(commentInput instanceof HTMLTextAreaElement) || !commentStatus || !noteId) {
+      return;
+    }
+
+    const user = await getSessionUser();
+    if (!user) {
+      commentStatus.textContent = 'Log in to comment.';
+      commentForm.remove();
+      return;
+    }
+
+    commentForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const content = commentInput.value.trim();
+      if (!content) return;
+
+      commentStatus.textContent = 'Posting…';
+      try {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId, content }),
+        });
+        if (!response.ok) {
+          const { error } = await response.json();
+          throw new Error(error ?? 'Failed to post comment');
+        }
+        commentInput.value = '';
+        commentStatus.textContent = 'Submitted — it will appear once approved.';
+      } catch (error) {
+        commentStatus.textContent = error instanceof Error ? error.message : 'Failed to post comment';
+      }
+    });
+  }
+
+  initBookmark();
+  loadComments();
+  initCommentForm();
+</script>
 
 <style>
   .note-header,
@@ -102,5 +233,117 @@ const related = allNotes.filter((n) =>
     margin-top: 3rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--color-border);
+  }
+
+  .bookmark-btn {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.6rem;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+
+  .bookmark-btn:hover:not(:disabled) {
+    color: var(--color-fg);
+    border-color: var(--color-fg);
+  }
+
+  .bookmark-btn[data-bookmarked='true'] {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .bookmark-btn:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .comments {
+    max-width: 70ch;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .comment-item {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .comment-meta {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin: 0 0 0.25rem;
+  }
+
+  .comment-body {
+    margin: 0;
+  }
+
+  .comment-empty {
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  .comment-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .comment-input {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    resize: vertical;
+    min-height: 4rem;
+  }
+
+  .comment-input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+  }
+
+  .comment-submit {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.75rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .comment-submit:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .comment-status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
   }
 </style>
