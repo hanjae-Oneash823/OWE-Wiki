@@ -1,4 +1,4 @@
-# OWE-Wiki
+<img src="./assets/logos/compact_logo_noBG.png" alt="OWE wiki logo" width="300" />
 
 A stable, ever-growing knowledge archive for personal and team-level use — covering coding, bioinformatics, biology, and ML/DL/AI.
 

@@ -1,5 +1,7 @@
 ---
 import 'katex/dist/katex.min.css';
+import { Image } from 'astro:assets';
+import logo from '../assets/logo.png';
 
 interface Props {
   title: string;
@@ -25,7 +27,9 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
   </head>
   <body>
     <header class="site-header">
-      <a class="site-title" href="/">Knowledge Wiki</a>
+      <a class="site-title" href="/">
+        <Image src={logo} alt="OWE wiki" height={32} />
+      </a>
       <nav>
         <a href="/domain/coding">Coding</a>
         <a href="/domain/bioinformatics">Bioinformatics</a>
@@ -99,13 +103,15 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
   }
 
   .site-title {
-    font-family: var(--font-display);
-    font-weight: 800;
-    text-decoration: none;
-    color: var(--color-fg);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    line-height: 0;
+  }
+
+  .site-title img {
+    display: block;
+    width: auto;
+    height: 32px;
   }
 
   .site-header nav {
