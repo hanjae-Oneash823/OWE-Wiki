@@ -64,6 +64,19 @@ const heroHotspots = [
     </figure>
   </section>
 
+  <section class="search-strip">
+    <form action="/search" method="get" class="search-strip-form">
+      <input
+        type="search"
+        name="q"
+        class="search-strip-input"
+        placeholder="Search notes…"
+        autocomplete="off"
+      />
+      <button type="submit" class="search-strip-submit">Search</button>
+    </form>
+  </section>
+
   <div class="home-grid">
     <section>
       <h2>Domains</h2>
@@ -256,6 +269,51 @@ const heroHotspots = [
       max-width: 220px;
       margin: 0 auto;
     }
+  }
+
+  .search-strip {
+    padding: 1.5rem 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .search-strip-form {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .search-strip-input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .search-strip-input:focus {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -1px;
+  }
+
+  .search-strip-submit {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 1.2rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .search-strip-submit:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
   }
 
   .home-grid {
