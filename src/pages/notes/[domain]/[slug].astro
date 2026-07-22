@@ -61,6 +61,15 @@ const related = allNotes.filter((n) =>
     <h2>Comments</h2>
     <div id="comment-list" class="comment-list"></div>
     <form id="comment-form" class="comment-form">
+      <input
+        type="text"
+        id="comment-website"
+        name="website"
+        class="honeypot-field"
+        tabindex="-1"
+        autocomplete="off"
+        aria-hidden="true"
+      />
       <textarea id="comment-input" class="comment-input" placeholder="Add a comment…" required maxlength="2000"></textarea>
       <button type="submit" class="comment-submit">Post comment</button>
     </form>
@@ -74,6 +83,7 @@ const related = allNotes.filter((n) =>
   const commentList = document.getElementById('comment-list');
   const commentForm = document.getElementById('comment-form');
   const commentInput = document.getElementById('comment-input');
+  const commentWebsite = document.getElementById('comment-website');
   const commentStatus = document.getElementById('comment-status');
 
   async function getSessionUser() {
@@ -166,10 +176,11 @@ const related = allNotes.filter((n) =>
 
       commentStatus.textContent = 'Posting…';
       try {
+        const website = commentWebsite instanceof HTMLInputElement ? commentWebsite.value : '';
         const response = await fetch('/api/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ noteId, content }),
+          body: JSON.stringify({ noteId, content, website }),
         });
         if (!response.ok) {
           const { error } = await response.json();
@@ -303,6 +314,14 @@ const related = allNotes.filter((n) =>
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+  }
+
+  .honeypot-field {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
   }
 
   .comment-input {
