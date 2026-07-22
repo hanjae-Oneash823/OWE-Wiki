@@ -3,7 +3,6 @@ export const prerender = true;
 
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import GrowthBadge from '../../../components/GrowthBadge.astro';
 import { getNoteSlug } from '../../../content.config';
 
 export async function getStaticPaths() {
@@ -29,7 +28,6 @@ const related = allNotes.filter((n) =>
   <header class="note-header">
     <h1>{note.data.title}</h1>
     <div class="note-meta">
-      <GrowthBadge stage={note.data.growthStage} />
       <span class="domain-tag">{note.data.domain}</span>
       <button id="bookmark-btn" class="bookmark-btn" data-note-id={note.data.noteId}>☆ Bookmark</button>
     </div>

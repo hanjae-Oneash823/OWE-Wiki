@@ -10,13 +10,11 @@ import './DraftEditor.css';
 interface DraftEditorProps {
   draftId: string;
   domains: readonly string[];
-  growthStages: readonly string[];
 }
 
 interface DraftRecord {
   title: string;
   domain: string;
-  growth_stage: string;
   content: string | null;
 }
 
@@ -24,12 +22,11 @@ type LoadState = 'loading' | 'ready' | 'error';
 
 const editorTheme = { light: lightDefaultTheme, dark: darkDefaultTheme };
 
-export default function DraftEditor({ draftId, domains, growthStages }: DraftEditorProps) {
+export default function DraftEditor({ draftId, domains }: DraftEditorProps) {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [title, setTitle] = useState('');
   const [domain, setDomain] = useState<string>(domains[0]);
-  const [growthStage, setGrowthStage] = useState<string>(growthStages[0]);
   const [saveStatus, setSaveStatus] = useState('');
   const userIdRef = useRef<string | null>(null);
 
@@ -71,7 +68,6 @@ export default function DraftEditor({ draftId, domains, growthStages }: DraftEdi
 
       setTitle(draft.title);
       setDomain(draft.domain);
-      setGrowthStage(draft.growth_stage);
 
       const blocks = editor.tryParseMarkdownToBlocks(draft.content ?? '');
       editor.replaceBlocks(editor.document, blocks);
@@ -91,7 +87,7 @@ export default function DraftEditor({ draftId, domains, growthStages }: DraftEdi
       const response = await fetch(`/api/drafts/${draftId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, domain, growthStage, content, ...extraFields }),
+        body: JSON.stringify({ title, domain, content, ...extraFields }),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -124,13 +120,6 @@ export default function DraftEditor({ draftId, domains, growthStages }: DraftEdi
             {domains.map((d) => (
               <option key={d} value={d}>
                 {d}
-              </option>
-            ))}
-          </select>
-          <select value={growthStage} onChange={(event) => setGrowthStage(event.target.value)} required>
-            {growthStages.map((stage) => (
-              <option key={stage} value={stage}>
-                {stage}
               </option>
             ))}
           </select>

@@ -5,7 +5,6 @@ interface PublishNoteParams {
   slug: string;
   noteId: string;
   title: string;
-  growthStage: string;
   content: string;
   publishedDate: string;
 }
@@ -16,7 +15,6 @@ function buildMdx(params: PublishNoteParams): string {
     `noteId: ${params.noteId}`,
     `title: ${JSON.stringify(params.title)}`,
     `domain: ${params.domain}`,
-    `growthStage: ${params.growthStage}`,
     'tags: []',
     'relatedNotes: []',
     `publishedDate: ${params.publishedDate}`,

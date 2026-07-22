@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
   const { data, error } = await supabase
     .from('drafts')
-    .select('id, title, domain, growth_stage, status, updated_at')
+    .select('id, title, domain, status, updated_at')
     .eq('author_id', userData.user.id)
     .order('updated_at', { ascending: false });
 
@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const { title, content, domain, growthStage } = await request.json();
+  const { title, content, domain } = await request.json();
   const trimmedTitle = typeof title === 'string' ? title.trim() : '';
 
   if (!trimmedTitle || !domain) {
@@ -69,7 +69,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       title: trimmedTitle,
       content: typeof content === 'string' ? content : '',
       domain,
-      growth_stage: growthStage ?? 'seedling',
       slug: slugify(trimmedTitle),
     })
     .select('id')

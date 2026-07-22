@@ -3,12 +3,12 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DraftEditor from '../../components/DraftEditor';
-import { DOMAINS, GROWTH_STAGES } from '../../content.config';
+import { DOMAINS } from '../../content.config';
 
 const draftId = Astro.params.id as string;
 ---
 
 <BaseLayout title="Edit draft — Knowledge Wiki">
-  <p><a href="/write">&larr; Your drafts</a></p>
-  <DraftEditor client:only="react" draftId={draftId} domains={DOMAINS} growthStages={GROWTH_STAGES} />
+  <p><a href="/dashboard">&larr; Your drafts</a></p>
+  <DraftEditor client:only="react" draftId={draftId} domains={DOMAINS} />
 </BaseLayout>

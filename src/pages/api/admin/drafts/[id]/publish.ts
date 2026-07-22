@@ -34,7 +34,6 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       noteId,
       title: draft.title,
       domain: draft.domain,
-      growthStage: draft.growth_stage,
       slug: draft.slug,
       content: draft.content,
       publishedDate,

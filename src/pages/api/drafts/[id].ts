@@ -22,10 +22,9 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
   if (!userData.user) return new Response(JSON.stringify({ error: 'Not signed in' }), { status: 401 });
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  for (const field of ['title', 'content', 'domain', 'growthStage', 'status'] as const) {
+  for (const field of ['title', 'content', 'domain', 'status'] as const) {
     if (field in body) {
-      const column = field === 'growthStage' ? 'growth_stage' : field;
-      updates[column] = body[field];
+      updates[field] = body[field];
     }
   }
 

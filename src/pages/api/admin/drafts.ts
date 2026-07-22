@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 
   const { data, error } = await supabase
     .from('drafts')
-    .select('id, title, domain, growth_stage, updated_at, users(github_username)')
+    .select('id, title, domain, updated_at, users(github_username)')
     .eq('status', 'pending_publish')
     .order('updated_at', { ascending: true });
 

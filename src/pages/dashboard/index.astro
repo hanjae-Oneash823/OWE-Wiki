@@ -21,17 +21,17 @@ import { DOMAINS } from '../../content.config';
 
     <div class="dash-grid">
       <section class="dash-card dash-card--capture">
-        <h2>Plant a seedling</h2>
-        <form id="seedling-form">
-          <input type="text" id="seedling-title" placeholder="Title" required maxlength="200" />
-          <select id="seedling-domain" required>
+        <h2>New draft</h2>
+        <form id="new-draft-form">
+          <input type="text" id="new-draft-title" placeholder="Title" required maxlength="200" />
+          <select id="new-draft-domain" required>
             <option value="" disabled selected>Domain</option>
             {DOMAINS.map((domain) => <option value={domain}>{domain}</option>)}
           </select>
-          <textarea id="seedling-content" placeholder="What's the raw idea?" maxlength="4000"></textarea>
-          <button type="submit">Plant it</button>
+          <textarea id="new-draft-content" placeholder="What's the raw idea?" maxlength="4000"></textarea>
+          <button type="submit">Create draft</button>
         </form>
-        <p id="seedling-status" class="form-status"></p>
+        <p id="new-draft-status" class="form-status"></p>
       </section>
 
       <section class="dash-card dash-card--drafts">
@@ -93,11 +93,11 @@ import { DOMAINS } from '../../content.config';
   const dashStats = document.getElementById('dash-stats');
   const adminSections = document.getElementById('admin-sections');
 
-  const seedlingForm = document.getElementById('seedling-form');
-  const seedlingTitle = document.getElementById('seedling-title');
-  const seedlingDomain = document.getElementById('seedling-domain');
-  const seedlingContent = document.getElementById('seedling-content');
-  const seedlingStatus = document.getElementById('seedling-status');
+  const newDraftForm = document.getElementById('new-draft-form');
+  const newDraftTitle = document.getElementById('new-draft-title');
+  const newDraftDomain = document.getElementById('new-draft-domain');
+  const newDraftContent = document.getElementById('new-draft-content');
+  const newDraftStatus = document.getElementById('new-draft-status');
   const draftList = document.getElementById('draft-list');
 
   const draftsList = document.getElementById('drafts-list');
@@ -206,7 +206,7 @@ import { DOMAINS } from '../../content.config';
     if (!drafts || drafts.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'draft-empty';
-      empty.textContent = 'No drafts yet — plant a seedling to get started.';
+      empty.textContent = 'No drafts yet — create one to get started.';
       draftList.append(empty);
       return 0;
     }
@@ -227,15 +227,11 @@ import { DOMAINS } from '../../content.config';
       domain.className = 'pill';
       domain.textContent = draft.domain;
 
-      const stage = document.createElement('span');
-      stage.className = 'growth-tag';
-      stage.textContent = `[${draft.growth_stage}]`;
-
       const status = document.createElement('span');
       status.className = 'pill pill--status';
       status.textContent = draft.status.replace('_', ' ');
 
-      meta.append(domain, stage, status);
+      meta.append(domain, status);
       item.append(link, meta);
 
       if (draft.status === 'pending_publish') {
@@ -305,7 +301,7 @@ import { DOMAINS } from '../../content.config';
       title.textContent = draft.title;
       const sub = document.createElement('span');
       sub.className = 'admin-row-sub';
-      sub.textContent = `${draft.domain} · ${draft.growth_stage} · by ${draft.users?.github_username ?? 'unknown'}`;
+      sub.textContent = `${draft.domain} · by ${draft.users?.github_username ?? 'unknown'}`;
       meta.append(title, sub);
 
       const publish = actionButton('Publish', async () => {
@@ -525,41 +521,40 @@ import { DOMAINS } from '../../content.config';
     }
   }
 
-  seedlingForm?.addEventListener('submit', async (event) => {
+  newDraftForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (
-      !(seedlingTitle instanceof HTMLInputElement) ||
-      !(seedlingDomain instanceof HTMLSelectElement) ||
-      !(seedlingContent instanceof HTMLTextAreaElement) ||
-      !seedlingStatus
+      !(newDraftTitle instanceof HTMLInputElement) ||
+      !(newDraftDomain instanceof HTMLSelectElement) ||
+      !(newDraftContent instanceof HTMLTextAreaElement) ||
+      !newDraftStatus
     ) {
       return;
     }
 
-    seedlingStatus.textContent = 'Planting…';
+    newDraftStatus.textContent = 'Creating…';
     try {
       const response = await fetch('/api/drafts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: seedlingTitle.value,
-          domain: seedlingDomain.value,
-          content: seedlingContent.value,
-          growthStage: 'seedling',
+          title: newDraftTitle.value,
+          domain: newDraftDomain.value,
+          content: newDraftContent.value,
         }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Failed to create draft');
 
-      seedlingTitle.value = '';
-      seedlingDomain.value = '';
-      seedlingContent.value = '';
-      seedlingStatus.textContent = 'Planted.';
+      newDraftTitle.value = '';
+      newDraftDomain.value = '';
+      newDraftContent.value = '';
+      newDraftStatus.textContent = 'Created.';
       const count = await loadDrafts();
       if (!adminSections?.hasAttribute('hidden')) return;
       setStats([{ label: 'Your drafts', value: count }]);
     } catch (error) {
-      seedlingStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
+      newDraftStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
     }
   });
 
@@ -647,15 +642,15 @@ import { DOMAINS } from '../../content.config';
     font-size: 1.1rem;
   }
 
-  #seedling-form {
+  #new-draft-form {
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
   }
 
-  #seedling-form input,
-  #seedling-form select,
-  #seedling-form textarea {
+  #new-draft-form input,
+  #new-draft-form select,
+  #new-draft-form textarea {
     font-family: var(--font-body);
     font-size: 1rem;
     padding: 0.5rem 0.65rem;
@@ -665,12 +660,12 @@ import { DOMAINS } from '../../content.config';
     border-radius: var(--radius);
   }
 
-  #seedling-form textarea {
+  #new-draft-form textarea {
     min-height: 4rem;
     resize: vertical;
   }
 
-  #seedling-form button {
+  #new-draft-form button {
     align-self: flex-start;
     font-family: var(--font-mono);
     font-size: 0.75rem;
@@ -684,7 +679,7 @@ import { DOMAINS } from '../../content.config';
     cursor: pointer;
   }
 
-  #seedling-form button:hover {
+  #new-draft-form button:hover {
     border-color: var(--brand-red);
     color: var(--brand-red);
   }
@@ -769,15 +764,6 @@ import { DOMAINS } from '../../content.config';
   .pill--status {
     color: var(--color-accent);
     border-color: var(--color-accent);
-  }
-
-  .growth-tag {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--color-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    white-space: nowrap;
   }
 
   .dash-divider {

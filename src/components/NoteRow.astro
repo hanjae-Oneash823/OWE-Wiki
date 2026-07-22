@@ -1,5 +1,4 @@
 ---
-import GrowthBadge from './GrowthBadge.astro';
 import { getNoteSlug } from '../content.config';
 import type { CollectionEntry } from 'astro:content';
 
@@ -15,7 +14,6 @@ const dateLabel = note.data.publishedDate.toISOString().slice(0, 10);
 
 <li class="note-row">
   <span class="note-row__date">{dateLabel}</span>
-  <GrowthBadge stage={note.data.growthStage} />
   <a class="note-row__title" href={href}>{note.data.title}</a>
   {showDomain && <span class="note-row__domain">{note.data.domain}</span>}
 </li>
@@ -23,7 +21,7 @@ const dateLabel = note.data.publishedDate.toISOString().slice(0, 10);
 <style>
   .note-row {
     display: grid;
-    grid-template-columns: 6.5rem 6.5rem 1fr auto;
+    grid-template-columns: 6.5rem 1fr auto;
     align-items: baseline;
     gap: 1rem;
     padding: 0.65rem 0;
