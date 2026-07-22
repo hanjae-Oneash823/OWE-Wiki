@@ -36,6 +36,7 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
         <a href="/domain/biology">Biology</a>
         <a href="/domain/ml-dl-ai">ML/DL/AI</a>
         <a href="/search">Search</a>
+        <span id="auth-status" class="auth-status"></span>
       </nav>
     </header>
     <main data-pagefind-body>
@@ -46,6 +47,50 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
     </footer>
   </body>
 </html>
+
+<script>
+  import { createBrowserClient } from '@supabase/ssr';
+
+  const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+  const authStatus = document.getElementById('auth-status');
+
+  async function renderAuthStatus() {
+    if (!authStatus) return;
+    const response = await fetch('/api/session');
+    const { user } = await response.json();
+
+    if (user) {
+      const username = document.createElement('span');
+      username.className = 'auth-username';
+      username.textContent = user.username ?? 'Account';
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/logout';
+      const logoutButton = document.createElement('button');
+      logoutButton.type = 'submit';
+      logoutButton.className = 'auth-link';
+      logoutButton.textContent = 'Log out';
+      form.append(logoutButton);
+
+      authStatus.replaceChildren(username, form);
+    } else {
+      const loginButton = document.createElement('button');
+      loginButton.type = 'button';
+      loginButton.className = 'auth-link';
+      loginButton.textContent = 'Log in';
+      loginButton.addEventListener('click', () => {
+        supabase.auth.signInWithOAuth({
+          provider: 'github',
+          options: { redirectTo: `${window.location.origin}/auth/callback` },
+        });
+      });
+      authStatus.replaceChildren(loginButton);
+    }
+  }
+
+  renderAuthStatus();
+</script>
 
 <style is:global>
   :root {
@@ -131,6 +176,36 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
   }
 
   .site-header nav a:hover {
+    color: var(--color-fg);
+  }
+
+  .auth-status {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .auth-username {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .auth-link {
+    font-family: inherit;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--color-muted);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+
+  .auth-link:hover {
     color: var(--color-fg);
   }
 

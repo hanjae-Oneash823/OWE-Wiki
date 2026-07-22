@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+import { createSupabaseServerClient } from '../../lib/supabase/server';
+
+const code = Astro.url.searchParams.get('code');
+
+if (code) {
+  const supabase = createSupabaseServerClient(Astro.request, Astro.cookies);
+  await supabase.auth.exchangeCodeForSession(code);
+}
+
+return Astro.redirect('/');
+---
