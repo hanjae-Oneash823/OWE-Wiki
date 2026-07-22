@@ -36,6 +36,7 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
         <a href="/domain/biology">Biology</a>
         <a href="/domain/ml-dl-ai">ML/DL/AI</a>
         <a href="/search">Search</a>
+        <a id="write-link" href="/write" hidden>Write</a>
         <span id="auth-status" class="auth-status"></span>
       </nav>
     </header>
@@ -80,6 +81,11 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
       if (!user) {
         renderLoginButton();
         return;
+      }
+
+      const writeLink = document.getElementById('write-link');
+      if (writeLink && (user.role === 'writer' || user.role === 'admin')) {
+        writeLink.removeAttribute('hidden');
       }
 
       const username = document.createElement('span');

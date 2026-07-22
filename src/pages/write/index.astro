@@ -1,0 +1,255 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DOMAINS } from '../../content.config';
+---
+
+<BaseLayout title="Write — Knowledge Wiki">
+  <div id="write-gate" data-state="loading">
+    <p class="gate-message">Checking access…</p>
+  </div>
+
+  <div id="write-dashboard" hidden>
+    <h1>Write</h1>
+
+    <section class="quick-capture">
+      <h2>Plant a seedling</h2>
+      <form id="seedling-form">
+        <input type="text" id="seedling-title" placeholder="Title" required maxlength="200" />
+        <select id="seedling-domain" required>
+          <option value="" disabled selected>Domain</option>
+          {DOMAINS.map((domain) => <option value={domain}>{domain}</option>)}
+        </select>
+        <textarea id="seedling-content" placeholder="What's the raw idea?" maxlength="4000"></textarea>
+        <button type="submit">Plant it</button>
+      </form>
+      <p id="seedling-status" class="form-status"></p>
+    </section>
+
+    <section class="draft-list-section">
+      <h2>Your drafts</h2>
+      <ul id="draft-list" class="draft-list"></ul>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  const gate = document.getElementById('write-gate');
+  const dashboard = document.getElementById('write-dashboard');
+  const seedlingForm = document.getElementById('seedling-form');
+  const seedlingTitle = document.getElementById('seedling-title');
+  const seedlingDomain = document.getElementById('seedling-domain');
+  const seedlingContent = document.getElementById('seedling-content');
+  const seedlingStatus = document.getElementById('seedling-status');
+  const draftList = document.getElementById('draft-list');
+
+  function showGateMessage(message, options = {}) {
+    if (!gate) return;
+    gate.innerHTML = '';
+    const p = document.createElement('p');
+    p.className = 'gate-message';
+    p.textContent = message;
+    gate.append(p);
+
+    if (options.requestButton) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Request writer access';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        const response = await fetch('/api/role-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestedRole: 'writer' }),
+        });
+        const data = await response.json();
+        p.textContent = response.ok
+          ? 'Request submitted — an admin needs to approve it before you can write.'
+          : (data.error ?? 'Failed to submit request');
+      });
+      gate.append(button);
+    }
+  }
+
+  async function loadDrafts() {
+    if (!draftList) return;
+    const response = await fetch('/api/drafts');
+    const { drafts } = await response.json();
+    draftList.replaceChildren();
+
+    if (!drafts || drafts.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'draft-empty';
+      empty.textContent = 'No drafts yet.';
+      draftList.append(empty);
+      return;
+    }
+
+    for (const draft of drafts) {
+      const item = document.createElement('li');
+      item.className = 'draft-row';
+
+      const link = document.createElement('a');
+      link.href = `/write/${draft.id}`;
+      link.className = 'draft-title';
+      link.textContent = draft.title;
+
+      const meta = document.createElement('span');
+      meta.className = 'draft-meta';
+      meta.textContent = `${draft.domain} · ${draft.growth_stage} · ${draft.status}`;
+
+      item.append(link, meta);
+      draftList.append(item);
+    }
+  }
+
+  async function init() {
+    const sessionResponse = await fetch('/api/session');
+    const { user } = await sessionResponse.json();
+
+    if (!user) {
+      showGateMessage('Log in to access the writer dashboard.');
+      return;
+    }
+
+    if (user.role !== 'writer' && user.role !== 'admin') {
+      showGateMessage("You're signed in as a reader.", { requestButton: true });
+      return;
+    }
+
+    gate?.remove();
+    dashboard?.removeAttribute('hidden');
+    await loadDrafts();
+  }
+
+  seedlingForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (
+      !(seedlingTitle instanceof HTMLInputElement) ||
+      !(seedlingDomain instanceof HTMLSelectElement) ||
+      !(seedlingContent instanceof HTMLTextAreaElement) ||
+      !seedlingStatus
+    ) {
+      return;
+    }
+
+    seedlingStatus.textContent = 'Planting…';
+    try {
+      const response = await fetch('/api/drafts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: seedlingTitle.value,
+          domain: seedlingDomain.value,
+          content: seedlingContent.value,
+          growthStage: 'seedling',
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Failed to create draft');
+
+      seedlingTitle.value = '';
+      seedlingDomain.value = '';
+      seedlingContent.value = '';
+      seedlingStatus.textContent = 'Planted.';
+      await loadDrafts();
+    } catch (error) {
+      seedlingStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
+    }
+  });
+
+  init();
+</script>
+
+<style>
+  .gate-message {
+    color: var(--color-muted);
+  }
+
+  .quick-capture {
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  #seedling-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-width: 480px;
+  }
+
+  #seedling-form input,
+  #seedling-form select,
+  #seedling-form textarea {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  #seedling-form textarea {
+    min-height: 4rem;
+    resize: vertical;
+  }
+
+  #seedling-form button {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  #seedling-form button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .form-status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .draft-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .draft-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .draft-title {
+    font-family: var(--font-display);
+    text-decoration: none;
+    color: var(--color-fg);
+  }
+
+  .draft-title:hover {
+    color: var(--color-accent);
+  }
+
+  .draft-meta {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+</style>

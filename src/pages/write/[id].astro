@@ -1,0 +1,183 @@
+---
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { DOMAINS, GROWTH_STAGES } from '../../content.config';
+---
+
+<BaseLayout title="Edit draft — Knowledge Wiki">
+  <p><a href="/write">&larr; Your drafts</a></p>
+  <div id="editor-gate">
+    <p class="gate-message">Loading…</p>
+  </div>
+
+  <form id="editor-form" hidden>
+    <input type="text" id="draft-title" placeholder="Title" required maxlength="200" />
+    <div class="editor-row">
+      <select id="draft-domain" required>
+        {DOMAINS.map((domain) => <option value={domain}>{domain}</option>)}
+      </select>
+      <select id="draft-growth-stage" required>
+        {GROWTH_STAGES.map((stage) => <option value={stage}>{stage}</option>)}
+      </select>
+    </div>
+    <textarea id="draft-content" placeholder="Write in MDX…" rows="16"></textarea>
+    <div class="editor-actions">
+      <button type="button" id="save-draft">Save</button>
+      <button type="button" id="submit-draft">Submit for review</button>
+    </div>
+    <p id="editor-status" class="form-status"></p>
+  </form>
+</BaseLayout>
+
+<script>
+  const draftId = window.location.pathname.split('/').pop();
+  const gate = document.getElementById('editor-gate');
+  const form = document.getElementById('editor-form');
+  const titleInput = document.getElementById('draft-title');
+  const domainSelect = document.getElementById('draft-domain');
+  const growthStageSelect = document.getElementById('draft-growth-stage');
+  const contentInput = document.getElementById('draft-content');
+  const status = document.getElementById('editor-status');
+
+  function currentFields() {
+    if (
+      !(titleInput instanceof HTMLInputElement) ||
+      !(domainSelect instanceof HTMLSelectElement) ||
+      !(growthStageSelect instanceof HTMLSelectElement) ||
+      !(contentInput instanceof HTMLTextAreaElement)
+    ) {
+      return null;
+    }
+    return {
+      title: titleInput.value,
+      domain: domainSelect.value,
+      growthStage: growthStageSelect.value,
+      content: contentInput.value,
+    };
+  }
+
+  async function save(extraFields = {}) {
+    if (!status) return;
+    const fields = currentFields();
+    if (!fields) return;
+
+    status.textContent = 'Saving…';
+    try {
+      const response = await fetch(`/api/drafts/${draftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...fields, ...extraFields }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error ?? 'Failed to save');
+      }
+      status.textContent = 'Saved.';
+    } catch (error) {
+      status.textContent = error instanceof Error ? error.message : 'Failed to save';
+    }
+  }
+
+  document.getElementById('save-draft')?.addEventListener('click', () => save());
+  document.getElementById('submit-draft')?.addEventListener('click', () => save({ status: 'pending_publish' }));
+
+  async function init() {
+    if (!draftId || !gate) return;
+
+    const response = await fetch(`/api/drafts/${draftId}`);
+    if (!response.ok) {
+      gate.innerHTML = '<p class="gate-message">Draft not found, or you don\'t have access to it.</p>';
+      return;
+    }
+
+    const { draft } = await response.json();
+    if (
+      !(titleInput instanceof HTMLInputElement) ||
+      !(domainSelect instanceof HTMLSelectElement) ||
+      !(growthStageSelect instanceof HTMLSelectElement) ||
+      !(contentInput instanceof HTMLTextAreaElement)
+    ) {
+      return;
+    }
+
+    titleInput.value = draft.title;
+    domainSelect.value = draft.domain;
+    growthStageSelect.value = draft.growth_stage;
+    contentInput.value = draft.content ?? '';
+
+    gate.remove();
+    form?.removeAttribute('hidden');
+  }
+
+  init();
+</script>
+
+<style>
+  .gate-message {
+    color: var(--color-muted);
+  }
+
+  #editor-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 70ch;
+  }
+
+  #draft-title,
+  .editor-row select,
+  #draft-content {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    padding: 0.5rem 0.65rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  #draft-content {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    resize: vertical;
+  }
+
+  .editor-row {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .editor-row select {
+    flex: 1;
+  }
+
+  .editor-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .editor-actions button {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .editor-actions button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .form-status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+</style>
