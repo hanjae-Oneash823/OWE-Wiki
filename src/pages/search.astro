@@ -15,19 +15,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <ul id="search-results" class="search-results"></ul>
 </BaseLayout>
 
-<script>
-  const input = document.getElementById('search-input') as HTMLInputElement;
-  const status = document.getElementById('search-status') as HTMLParagraphElement;
-  const results = document.getElementById('search-results') as HTMLUListElement;
+<script is:inline>
+  const input = document.getElementById('search-input');
+  const status = document.getElementById('search-status');
+  const results = document.getElementById('search-results');
 
-  let debounceHandle: ReturnType<typeof setTimeout> | undefined;
-
-  // @ts-expect-error - generated at build time by astro-pagefind, no local types
-  let pagefindPromise: Promise<any> | undefined;
+  let debounceHandle;
+  let pagefindPromise;
 
   function loadPagefind() {
     if (!pagefindPromise) {
-      pagefindPromise = import(/* @vite-ignore */ '/pagefind/pagefind.js').then(async (mod) => {
+      pagefindPromise = import('/pagefind/pagefind.js').then(async (mod) => {
         await mod.init();
         return mod;
       });
@@ -35,7 +33,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     return pagefindPromise;
   }
 
-  async function runSearch(query: string): Promise<void> {
+  async function runSearch(query) {
     results.replaceChildren();
 
     if (!query.trim()) {
@@ -73,7 +71,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         li.append(link, excerpt);
         results.append(li);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       status.textContent = `Search failed: ${message}`;
       console.error('Pagefind search failed', error);
