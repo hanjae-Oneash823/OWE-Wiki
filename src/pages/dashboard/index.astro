@@ -2,7 +2,6 @@
 export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { DOMAINS } from '../../content.config';
 ---
 
 <BaseLayout title="Dashboard — Knowledge Wiki">
@@ -19,26 +18,14 @@ import { DOMAINS } from '../../content.config';
       <div class="dash-stats" id="dash-stats"></div>
     </header>
 
-    <div class="dash-grid">
-      <section class="dash-card dash-card--capture">
-        <h2>New draft</h2>
-        <form id="new-draft-form">
-          <input type="text" id="new-draft-title" placeholder="Title" required maxlength="200" />
-          <select id="new-draft-domain" required>
-            <option value="" disabled selected>Domain</option>
-            {DOMAINS.map((domain) => <option value={domain}>{domain}</option>)}
-          </select>
-          <textarea id="new-draft-content" placeholder="What's the raw idea?" maxlength="4000"></textarea>
-          <button type="submit">Create draft</button>
-        </form>
-        <p id="new-draft-status" class="form-status"></p>
-      </section>
-
-      <section class="dash-card dash-card--drafts">
+    <section class="dash-card dash-card--drafts">
+      <div class="dash-card-head">
         <h2>Your drafts</h2>
-        <ul id="draft-list" class="draft-list"></ul>
-      </section>
-    </div>
+        <button type="button" id="new-draft-btn">+ New draft</button>
+      </div>
+      <p id="new-draft-status" class="form-status"></p>
+      <div id="draft-list" class="draft-grid"></div>
+    </section>
 
     <div id="admin-sections" hidden>
       <div class="dash-divider">
@@ -93,10 +80,7 @@ import { DOMAINS } from '../../content.config';
   const dashStats = document.getElementById('dash-stats');
   const adminSections = document.getElementById('admin-sections');
 
-  const newDraftForm = document.getElementById('new-draft-form');
-  const newDraftTitle = document.getElementById('new-draft-title');
-  const newDraftDomain = document.getElementById('new-draft-domain');
-  const newDraftContent = document.getElementById('new-draft-content');
+  const newDraftBtn = document.getElementById('new-draft-btn');
   const newDraftStatus = document.getElementById('new-draft-status');
   const draftList = document.getElementById('draft-list');
 
@@ -212,27 +196,40 @@ import { DOMAINS } from '../../content.config';
     }
 
     for (const draft of drafts) {
-      const item = document.createElement('li');
-      item.className = 'draft-row';
+      const card = document.createElement('div');
+      card.className = 'draft-card';
 
       const link = document.createElement('a');
       link.href = `/write/${draft.id}`;
-      link.className = 'draft-title';
-      link.textContent = draft.title;
+      link.className = 'draft-card__link';
 
-      const meta = document.createElement('div');
-      meta.className = 'draft-meta';
+      const image = document.createElement('div');
+      image.className = 'draft-card__image';
+      const placeholder = document.createElement('div');
+      placeholder.className = 'draft-card__placeholder';
+      image.append(placeholder);
+
+      const date = document.createElement('span');
+      date.className = 'draft-card__date';
+      date.textContent = draft.updated_at ? draft.updated_at.slice(0, 10) : '';
+
+      const title = document.createElement('span');
+      title.className = 'draft-card__title';
+      title.textContent = draft.title;
 
       const domain = document.createElement('span');
-      domain.className = 'pill';
+      domain.className = 'draft-card__domain';
       domain.textContent = draft.domain;
+
+      link.append(image, date, title, domain);
+
+      const footer = document.createElement('div');
+      footer.className = 'draft-card__footer';
 
       const status = document.createElement('span');
       status.className = 'pill pill--status';
       status.textContent = draft.status.replace('_', ' ');
-
-      meta.append(domain, status);
-      item.append(link, meta);
+      footer.append(status);
 
       if (draft.status === 'pending_publish') {
         const withdrawBtn = document.createElement('button');
@@ -253,7 +250,7 @@ import { DOMAINS } from '../../content.config';
           }
           await loadDrafts();
         });
-        item.append(withdrawBtn);
+        footer.append(withdrawBtn);
       } else {
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
@@ -272,9 +269,11 @@ import { DOMAINS } from '../../content.config';
             setStats([{ label: 'Your drafts', value: count }]);
           }
         });
-        item.append(deleteBtn);
+        footer.append(deleteBtn);
       }
-      draftList.append(item);
+
+      card.append(link, footer);
+      draftList.append(card);
     }
     return drafts.length;
   }
@@ -521,40 +520,21 @@ import { DOMAINS } from '../../content.config';
     }
   }
 
-  newDraftForm?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (
-      !(newDraftTitle instanceof HTMLInputElement) ||
-      !(newDraftDomain instanceof HTMLSelectElement) ||
-      !(newDraftContent instanceof HTMLTextAreaElement) ||
-      !newDraftStatus
-    ) {
-      return;
-    }
-
-    newDraftStatus.textContent = 'Creating…';
+  newDraftBtn?.addEventListener('click', async () => {
+    if (newDraftStatus) newDraftStatus.textContent = 'Creating…';
     try {
       const response = await fetch('/api/drafts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newDraftTitle.value,
-          domain: newDraftDomain.value,
-          content: newDraftContent.value,
-        }),
+        body: JSON.stringify({}),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? 'Failed to create draft');
-
-      newDraftTitle.value = '';
-      newDraftDomain.value = '';
-      newDraftContent.value = '';
-      newDraftStatus.textContent = 'Created.';
-      const count = await loadDrafts();
-      if (!adminSections?.hasAttribute('hidden')) return;
-      setStats([{ label: 'Your drafts', value: count }]);
+      window.location.href = `/write/${data.id}`;
     } catch (error) {
-      newDraftStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
+      if (newDraftStatus) {
+        newDraftStatus.textContent = error instanceof Error ? error.message : 'Failed to create draft';
+      }
     }
   });
 
@@ -619,54 +599,25 @@ import { DOMAINS } from '../../content.config';
     color: var(--color-muted);
   }
 
-  .dash-grid {
-    display: grid;
-    grid-template-columns: minmax(260px, 380px) 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  @media (max-width: 760px) {
-    .dash-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .dash-card {
     border: 1px solid var(--color-border);
     padding: 1.5rem;
   }
 
   .dash-card h2 {
-    margin-top: 0;
+    margin: 0;
     font-size: 1.1rem;
   }
 
-  #new-draft-form {
+  .dash-card-head {
     display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
   }
 
-  #new-draft-form input,
-  #new-draft-form select,
-  #new-draft-form textarea {
-    font-family: var(--font-body);
-    font-size: 1rem;
-    padding: 0.5rem 0.65rem;
-    background: var(--color-bg);
-    color: var(--color-fg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-  }
-
-  #new-draft-form textarea {
-    min-height: 4rem;
-    resize: vertical;
-  }
-
-  #new-draft-form button {
-    align-self: flex-start;
+  #new-draft-btn {
     font-family: var(--font-mono);
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -677,9 +628,10 @@ import { DOMAINS } from '../../content.config';
     padding: 0.4rem 0.8rem;
     color: var(--color-fg);
     cursor: pointer;
+    flex-shrink: 0;
   }
 
-  #new-draft-form button:hover {
+  #new-draft-btn:hover {
     border-color: var(--brand-red);
     color: var(--brand-red);
   }
@@ -691,47 +643,78 @@ import { DOMAINS } from '../../content.config';
     min-height: 1em;
   }
 
-  .draft-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 26rem;
-    overflow-y: auto;
+  .draft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.5rem;
   }
 
   .draft-empty {
     color: var(--color-muted);
   }
 
-  .draft-row {
+  .draft-card {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem 1rem;
-    padding: 0.7rem 0;
-    border-bottom: 1px solid var(--color-border);
+    flex-direction: column;
+    gap: 0.3rem;
   }
 
-  .draft-row:last-child {
-    border-bottom: none;
-  }
-
-  .draft-title {
-    font-family: var(--font-display);
+  .draft-card__link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
     text-decoration: none;
     color: var(--color-fg);
   }
 
-  .draft-title:hover {
+  .draft-card__image {
+    aspect-ratio: 1 / 1;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+
+  .draft-card__placeholder {
+    width: 100%;
+    height: 100%;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        var(--color-border) 0,
+        var(--color-border) 1px,
+        transparent 1px,
+        transparent 10px
+      );
+  }
+
+  .draft-card__date {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+  }
+
+  .draft-card__title {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .draft-card__link:hover .draft-card__title {
     color: var(--brand-red);
   }
 
-  .draft-meta {
+  .draft-card__domain {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-muted);
+  }
+
+  .draft-card__footer {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.6rem;
-    flex-shrink: 0;
   }
 
   .draft-delete {

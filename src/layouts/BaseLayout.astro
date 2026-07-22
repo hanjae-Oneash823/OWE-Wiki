@@ -42,7 +42,10 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
       <slot />
     </main>
     <footer class="site-footer">
-      <p>A living knowledge base &mdash; articles and drafts, always in progress.</p>
+      <div class="site-footer-inner">
+        <p>A living knowledge base &mdash; articles and drafts, always in progress.</p>
+        <a href="https://github.com/hanjae-Oneash823/OWE-Wiki" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </div>
     </footer>
   </body>
 </html>
@@ -251,11 +254,37 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
   }
 
   .site-footer {
-    text-align: center;
-    padding: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .site-footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
     color: var(--color-muted);
     font-family: var(--font-mono);
     font-size: 0.75rem;
+  }
+
+  .site-footer-inner p {
+    margin: 0;
+  }
+
+  .site-footer-inner a {
+    color: var(--color-muted);
+    text-decoration: none;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .site-footer-inner a:hover {
+    color: var(--brand-red);
   }
 
   a {

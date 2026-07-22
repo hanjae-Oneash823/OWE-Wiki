@@ -3,6 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 import { canWrite, getUserRole } from '../../lib/supabase/roles';
+import { DOMAINS } from '../../content.config';
 
 const MAX_DRAFTS_PER_DAY = 5;
 
@@ -33,12 +34,11 @@ export const GET: APIRoute = async ({ request, cookies }) => {
 };
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  const { title, content, domain } = await request.json();
-  const trimmedTitle = typeof title === 'string' ? title.trim() : '';
-
-  if (!trimmedTitle || !domain) {
-    return new Response(JSON.stringify({ error: 'title and domain are required' }), { status: 400 });
-  }
+  const body = await request.json().catch(() => ({}));
+  const trimmedTitle = typeof body.title === 'string' ? body.title.trim() : '';
+  const title = trimmedTitle || 'Untitled draft';
+  const domain = typeof body.domain === 'string' && DOMAINS.includes(body.domain) ? body.domain : DOMAINS[0];
+  const content = body.content;
 
   const supabase = createSupabaseServerClient(request, cookies);
   const { data: userData } = await supabase.auth.getUser();
@@ -66,10 +66,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     .from('drafts')
     .insert({
       author_id: userData.user.id,
-      title: trimmedTitle,
+      title,
       content: typeof content === 'string' ? content : '',
       domain,
-      slug: slugify(trimmedTitle),
+      slug: slugify(title),
     })
     .select('id')
     .single();

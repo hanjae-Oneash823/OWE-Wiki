@@ -7,6 +7,7 @@ import rehypeKatex from 'rehype-katex';
 import pagefind from 'astro-pagefind';
 import vercel from '@astrojs/vercel';
 import react from '@astrojs/react';
+import { remarkWikilinks } from './src/lib/remarkWikilinks.ts';
 
 // https://astro.build/config
 export default defineConfig({
@@ -14,7 +15,7 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [mdx(), pagefind(), react()],
   markdown: {
-    remarkPlugins: [remarkMath],
+    remarkPlugins: [remarkMath, remarkWikilinks],
     rehypePlugins: [rehypeKatex],
   },
 });

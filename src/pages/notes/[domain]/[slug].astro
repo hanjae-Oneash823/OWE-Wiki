@@ -4,6 +4,7 @@ export const prerender = true;
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getNoteSlug } from '../../../content.config';
+import { computeBacklinks } from '../../../lib/wikilinks';
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes');
@@ -17,9 +18,7 @@ const { note } = Astro.props;
 const { Content } = await render(note);
 
 const allNotes = await getCollection('notes');
-const related = allNotes.filter((n) =>
-  note.data.relatedNotes.includes(getNoteSlug(n.id, n.data.domain))
-);
+const backlinks = computeBacklinks(allNotes).get(note.id) ?? [];
 ---
 
 <BaseLayout title={`${note.data.title} — Knowledge Wiki`} description={note.data.description}>
@@ -44,11 +43,11 @@ const related = allNotes.filter((n) =>
     <Content />
   </article>
 
-  {related.length > 0 && (
+  {backlinks.length > 0 && (
     <section class="related">
-      <h2>Related notes</h2>
+      <h2>Linked from</h2>
       <ul>
-        {related.map((r) => (
+        {backlinks.map((r) => (
           <li><a href={`/notes/${r.data.domain}/${getNoteSlug(r.id, r.data.domain)}`}>{r.data.title}</a></li>
         ))}
       </ul>
@@ -245,6 +244,23 @@ const related = allNotes.filter((n) =>
     margin-top: 3rem;
     padding-top: 1.5rem;
     border-top: 1px solid var(--color-border);
+  }
+
+  .note-content :global(a.wikilink) {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .note-content :global(a.wikilink:hover) {
+    opacity: 0.8;
+  }
+
+  .note-content :global(a.wikilink-broken) {
+    color: var(--color-muted);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--color-muted);
+    cursor: help;
   }
 
   .bookmark-btn {

@@ -16,7 +16,7 @@ function buildMdx(params: PublishNoteParams): string {
     `title: ${JSON.stringify(params.title)}`,
     `domain: ${params.domain}`,
     'tags: []',
-    'relatedNotes: []',
+    'aliases: []',
     `publishedDate: ${params.publishedDate}`,
     '---',
     '',

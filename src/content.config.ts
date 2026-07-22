@@ -11,8 +11,10 @@ const notes = defineCollection({
     title: z.string(),
     description: z.string().optional(),
     domain: z.enum(DOMAINS),
+    image: z.string().optional(),
     tags: z.array(z.string()).default([]),
-    relatedNotes: z.array(z.string()).default([]),
+    // Former titles this note was published under — [[Old Title]] wikilinks elsewhere keep resolving after a rename.
+    aliases: z.array(z.string()).default([]),
     publishedDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
   }),
@@ -20,8 +22,4 @@ const notes = defineCollection({
 
 export const collections = { notes };
 export { DOMAINS };
-
-/** Strips the leading `domain/` segment the glob loader adds to `note.id`. */
-export function getNoteSlug(noteId: string, domain: string): string {
-  return noteId.startsWith(`${domain}/`) ? noteId.slice(domain.length + 1) : noteId;
-}
+export { getNoteSlug } from './lib/noteSlug';
