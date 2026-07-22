@@ -50,9 +50,9 @@ const { title, description = 'A living knowledge base for coding, bioinformatics
 </html>
 
 <script>
-  import { createBrowserClient } from '@supabase/ssr';
+  import { createSupabaseBrowserClient } from '../lib/supabase/browser';
 
-  const supabase = createBrowserClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+  const supabase = createSupabaseBrowserClient();
   const authStatus = document.getElementById('auth-status');
 
   function renderLoginButton() {

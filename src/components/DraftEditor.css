@@ -1,0 +1,110 @@
+.draft-editor .gate-message {
+  color: var(--color-muted);
+}
+
+.draft-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 70ch;
+}
+
+.draft-editor-form > input,
+.draft-editor-form .editor-row select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.draft-editor-form .editor-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.draft-editor-form .editor-row select {
+  flex: 1;
+}
+
+.block-editor-wrapper {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  min-height: 20rem;
+}
+
+.block-editor-wrapper .bn-editor {
+  padding: 0.75rem 0;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.editor-actions button {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: none;
+  border: 1px solid var(--color-fg);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.8rem;
+  color: var(--color-fg);
+  cursor: pointer;
+}
+
+.editor-actions button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.form-status {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* Callout block */
+.callout-block {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-fg) 5%, transparent);
+}
+
+.callout-block[data-callout-type='info'] {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.callout-block[data-callout-type='warning'] {
+  border-color: color-mix(in srgb, #d8a531 50%, var(--color-border));
+  background: color-mix(in srgb, #d8a531 12%, transparent);
+}
+
+.callout-block[data-callout-type='success'] {
+  border-color: color-mix(in srgb, var(--color-accent) 60%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+}
+
+.callout-block[data-callout-type='error'] {
+  border-color: color-mix(in srgb, var(--brand-red) 50%, var(--color-border));
+  background: color-mix(in srgb, var(--brand-red) 10%, transparent);
+}
+
+.callout-icon {
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.callout-content {
+  flex: 1;
+  min-width: 0;
+}
