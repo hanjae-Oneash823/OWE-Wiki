@@ -22,6 +22,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   let debounceHandle: ReturnType<typeof setTimeout> | undefined;
 
+  // @ts-expect-error - generated at build time by astro-pagefind, no local types
+  let pagefindPromise: Promise<any> | undefined;
+
+  function loadPagefind() {
+    if (!pagefindPromise) {
+      pagefindPromise = import(/* @vite-ignore */ '/pagefind/pagefind.js').then(async (mod) => {
+        await mod.init();
+        return mod;
+      });
+    }
+    return pagefindPromise;
+  }
+
   async function runSearch(query: string): Promise<void> {
     results.replaceChildren();
 
@@ -32,33 +45,38 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     status.textContent = 'Searching…';
 
-    // @ts-expect-error - generated at build time by astro-pagefind, no local types
-    const pagefind = await import(/* @vite-ignore */ '/pagefind/pagefind.js');
-    const search = await pagefind.search(query);
+    try {
+      const pagefind = await loadPagefind();
+      const search = await pagefind.search(query);
 
-    if (search.results.length === 0) {
-      status.textContent = `No results for "${query}"`;
-      return;
-    }
+      if (search.results.length === 0) {
+        status.textContent = `No results for "${query}"`;
+        return;
+      }
 
-    status.textContent = `${search.results.length} result${search.results.length === 1 ? '' : 's'} for "${query}"`;
+      status.textContent = `${search.results.length} result${search.results.length === 1 ? '' : 's'} for "${query}"`;
 
-    for (const result of search.results) {
-      const data = await result.data();
-      const li = document.createElement('li');
-      li.className = 'search-row';
+      for (const result of search.results) {
+        const data = await result.data();
+        const li = document.createElement('li');
+        li.className = 'search-row';
 
-      const link = document.createElement('a');
-      link.className = 'search-row__title';
-      link.href = data.url;
-      link.textContent = data.meta?.title ?? data.url;
+        const link = document.createElement('a');
+        link.className = 'search-row__title';
+        link.href = data.url;
+        link.textContent = data.meta?.title ?? data.url;
 
-      const excerpt = document.createElement('p');
-      excerpt.className = 'search-row__excerpt';
-      excerpt.innerHTML = data.excerpt;
+        const excerpt = document.createElement('p');
+        excerpt.className = 'search-row__excerpt';
+        excerpt.innerHTML = data.excerpt;
 
-      li.append(link, excerpt);
-      results.append(li);
+        li.append(link, excerpt);
+        results.append(li);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      status.textContent = `Search failed: ${message}`;
+      console.error('Pagefind search failed', error);
     }
   }
 
