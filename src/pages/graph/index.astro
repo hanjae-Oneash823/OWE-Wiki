@@ -124,10 +124,13 @@ const orphans = nodes.filter((node) => !linkedIds.has(node.id));
     stroke-width: 1.5;
   }
 
+  .graph-node {
+    transition: opacity 0.15s ease;
+  }
+
   .graph-node circle {
     stroke: var(--color-bg);
     stroke-width: 1.5;
-    transition: opacity 0.15s ease;
   }
 
   .graph-node__label {

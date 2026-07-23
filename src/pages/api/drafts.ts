@@ -4,19 +4,9 @@ import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 import { canWrite, getUserRole } from '../../lib/supabase/roles';
 import { DOMAINS } from '../../content.config';
+import { slugify } from '../../lib/slugify';
 
 const MAX_DRAFTS_PER_DAY = 5;
-
-function slugify(title: string): string {
-  return (
-    title
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-') || 'untitled'
-  );
-}
 
 export const GET: APIRoute = async ({ request, cookies }) => {
   const supabase = createSupabaseServerClient(request, cookies);

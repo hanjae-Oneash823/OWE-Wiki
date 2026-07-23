@@ -32,6 +32,7 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
     <div class="note-meta">
       <span class="domain-tag">{note.data.domain}</span>
       <button id="bookmark-btn" class="bookmark-btn" data-note-id={note.data.noteId}>☆ Bookmark</button>
+      <button id="rename-btn" class="rename-btn" hidden>Rename</button>
     </div>
     {note.data.tags.length > 0 && (
       <ul class="tag-list">
@@ -40,6 +41,12 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
         ))}
       </ul>
     )}
+    <form id="rename-form" class="rename-form" hidden>
+      <input type="text" id="rename-input" required maxlength="200" />
+      <button type="submit">Save</button>
+      <button type="button" id="rename-cancel">Cancel</button>
+    </form>
+    <p id="rename-status" class="rename-status"></p>
   </header>
 
   <article class="note-content">
@@ -76,6 +83,12 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
 <script>
   const noteId = document.querySelector('[data-note-id]')?.getAttribute('data-note-id') ?? null;
   const bookmarkBtn = document.getElementById('bookmark-btn');
+  const renameBtn = document.getElementById('rename-btn');
+  const renameForm = document.getElementById('rename-form');
+  const renameInput = document.getElementById('rename-input');
+  const renameCancel = document.getElementById('rename-cancel');
+  const renameStatus = document.getElementById('rename-status');
+  const noteTitleEl = document.querySelector('.note-header h1');
   const commentList = document.getElementById('comment-list');
   const commentForm = document.getElementById('comment-form');
   const commentInput = document.getElementById('comment-input');
@@ -117,6 +130,53 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
       });
       const data = await response.json();
       setBookmarkState(data.bookmarked);
+    });
+  }
+
+  async function initRename() {
+    if (!(renameBtn instanceof HTMLButtonElement) || !(renameForm instanceof HTMLFormElement) || !noteId) return;
+
+    const user = await getSessionUser();
+    if (!user || user.role !== 'admin') return;
+
+    renameBtn.hidden = false;
+
+    renameBtn.addEventListener('click', () => {
+      renameBtn.hidden = true;
+      renameForm.hidden = false;
+      if (renameInput instanceof HTMLInputElement) {
+        renameInput.value = noteTitleEl?.textContent ?? '';
+        renameInput.focus();
+      }
+    });
+
+    renameCancel?.addEventListener('click', () => {
+      renameForm.hidden = true;
+      renameBtn.hidden = false;
+      if (renameStatus) renameStatus.textContent = '';
+    });
+
+    renameForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(renameInput instanceof HTMLInputElement) || !renameStatus) return;
+
+      const newTitle = renameInput.value.trim();
+      if (!newTitle) return;
+
+      renameStatus.textContent = 'Renaming…';
+      try {
+        const response = await fetch('/api/admin/notes/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ noteId, newTitle }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error ?? 'Failed to rename');
+        renameStatus.textContent = 'Renamed — redirecting…';
+        window.location.href = data.href;
+      } catch (error) {
+        renameStatus.textContent = error instanceof Error ? error.message : 'Failed to rename';
+      }
     });
   }
 
@@ -191,6 +251,7 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
   }
 
   initBookmark();
+  initRename();
   loadComments();
   initCommentForm();
 </script>
@@ -288,6 +349,67 @@ const backlinks = linkGraph.backlinks.get(note.id) ?? [];
   .bookmark-btn:disabled {
     cursor: default;
     opacity: 0.5;
+  }
+
+  .rename-btn {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.6rem;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+
+  .rename-btn:hover {
+    color: var(--color-fg);
+    border-color: var(--color-fg);
+  }
+
+  .rename-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .rename-form input {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 0.35rem 0.6rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    min-width: 16rem;
+  }
+
+  .rename-form button {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.35rem 0.75rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .rename-form button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .rename-status {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin: 0.5rem 0 0;
   }
 
   .comments {

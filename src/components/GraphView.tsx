@@ -151,7 +151,7 @@ export default function GraphView({ nodes, edges, domains }: GraphViewProps) {
                 key={node.id}
                 href={node.href}
                 className="graph-node"
-                opacity={dimmed ? 0.25 : 1}
+                style={{ opacity: dimmed ? 0.25 : 1 }}
                 onPointerEnter={() => setHoveredId(node.id)}
                 onPointerLeave={() => setHoveredId(null)}
               >
