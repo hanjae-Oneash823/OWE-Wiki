@@ -1,5 +1,6 @@
 import type { CollectionEntry } from 'astro:content';
 import { normalizeTitle } from './titleKey';
+import { getNoteSlug } from './noteSlug';
 
 type Note = CollectionEntry<'notes'>;
 
@@ -59,4 +60,52 @@ export function computeLinkGraph(notes: Note[]): LinkGraph {
   }
 
   return { outbound, backlinks };
+}
+
+export interface GraphNode {
+  id: string;
+  title: string;
+  domain: string;
+  href: string;
+  backlinkCount: number;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  cross: boolean;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+/** Flattens the link graph into plain, JSON-serializable nodes/edges for a client-rendered graph view. */
+export function buildGraphData(notes: Note[]): GraphData {
+  const { outbound, backlinks } = computeLinkGraph(notes);
+
+  const nodes: GraphNode[] = notes.map((note) => ({
+    id: note.id,
+    title: note.data.title,
+    domain: note.data.domain,
+    href: `/notes/${note.data.domain}/${getNoteSlug(note.id, note.data.domain)}`,
+    backlinkCount: (backlinks.get(note.id) ?? []).length,
+  }));
+
+  const domainById = new Map(notes.map((note) => [note.id, note.data.domain]));
+  const seenPairs = new Set<string>();
+  const edges: GraphEdge[] = [];
+
+  for (const [sourceId, targets] of outbound) {
+    for (const target of targets) {
+      const pairKey = [sourceId, target.id].sort().join('::');
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
+
+      edges.push({ source: sourceId, target: target.id, cross: domainById.get(sourceId) !== domainById.get(target.id) });
+    }
+  }
+
+  return { nodes, edges };
 }

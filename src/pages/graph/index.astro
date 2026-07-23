@@ -1,0 +1,148 @@
+---
+export const prerender = true;
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GraphView from '../../components/GraphView';
+import { buildGraphData } from '../../lib/wikilinks';
+import { DOMAINS } from '../../content.config';
+
+const notes = await getCollection('notes');
+const { nodes, edges } = buildGraphData(notes);
+
+const linkedIds = new Set(edges.flatMap((edge) => [edge.source, edge.target]));
+const orphans = nodes.filter((node) => !linkedIds.has(node.id));
+---
+
+<BaseLayout title="Graph — Knowledge Wiki" description="A domain-clustered map of every note and how they connect.">
+  <div class="graph-page">
+    <p class="back-link"><a href="/">&larr; Home</a></p>
+    <h1>Knowledge graph</h1>
+    <p class="graph-intro">
+      Every published note, clustered by domain. Node size tracks how often a note is linked to;
+      thicker, longer lines cross domain boundaries — that's where the wiki connects disciplines.
+    </p>
+
+    {nodes.length === 0 ? (
+      <p>No notes published yet.</p>
+    ) : (
+      <GraphView client:only="react" nodes={nodes} edges={edges} domains={DOMAINS} />
+    )}
+
+    {orphans.length > 0 && (
+      <section class="graph-orphans">
+        <h2>Not yet linked</h2>
+        <p class="graph-orphans-intro">These notes have no [[wikilinks]] in or out — good candidates to connect.</p>
+        <ul>
+          {orphans.map((node) => (
+            <li>
+              <a href={node.href}>{node.title}</a>
+              <span class="graph-orphans-domain">{node.domain}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .graph-page {
+    max-width: 960px;
+    margin: 0 auto;
+    --domain-coding: var(--color-accent);
+    --domain-bioinformatics: #3b6ea0;
+    --domain-biology: #b8860b;
+    --domain-ml-dl-ai: #6a4c93;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .graph-page {
+      --domain-bioinformatics: #6fa8dc;
+      --domain-biology: #d9a441;
+      --domain-ml-dl-ai: #a487d6;
+    }
+  }
+
+  .graph-intro {
+    color: var(--color-muted);
+    max-width: 60ch;
+  }
+
+  .graph-orphans {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .graph-orphans-intro {
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+
+  .graph-orphans ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .graph-orphans-domain {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+</style>
+
+<style is:global>
+  .graph-view {
+    width: 100%;
+    touch-action: none;
+  }
+
+  .graph-view svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    cursor: grab;
+    border: 1px solid var(--color-border);
+  }
+
+  .graph-edge {
+    stroke: var(--color-border);
+    stroke-width: 1;
+  }
+
+  .graph-edge--cross {
+    stroke: var(--color-muted);
+    stroke-width: 1.5;
+  }
+
+  .graph-node circle {
+    stroke: var(--color-bg);
+    stroke-width: 1.5;
+    transition: opacity 0.15s ease;
+  }
+
+  .graph-node__label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    fill: var(--color-muted);
+    pointer-events: none;
+  }
+
+  .graph-view-status,
+  .graph-hint {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    text-align: center;
+    margin: 0.75rem 0 0;
+  }
+</style>
