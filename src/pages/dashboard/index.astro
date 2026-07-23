@@ -498,7 +498,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     for (const domain of domains) {
       const item = document.createElement('li');
-      item.className = 'admin-row admin-row-wrap';
+      item.className = 'admin-row admin-row-wrap domain-row';
 
       const meta = document.createElement('div');
       meta.className = 'admin-row-meta';
@@ -641,7 +641,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         await loadDomains();
       });
 
-      item.append(meta, actions, editForm, editStatus, deleteControls);
+      const header = document.createElement('div');
+      header.className = 'domain-row-header';
+      header.append(meta, actions);
+
+      item.append(header, editForm, editStatus, deleteControls);
       domainsList.append(item);
     }
   }
@@ -1103,20 +1107,30 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     margin-bottom: 1rem;
   }
 
-  .domain-edit-form {
+  .admin-row.domain-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .domain-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .domain-edit-form:not([hidden]) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    width: 100%;
     margin-top: 0.5rem;
   }
 
-  .domain-delete-controls {
+  .domain-delete-controls:not([hidden]) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
-    width: 100%;
     margin-top: 0.5rem;
   }
 
