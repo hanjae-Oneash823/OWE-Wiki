@@ -4,7 +4,8 @@ export const prerender = true;
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getNoteSlug } from '../../../content.config';
-import { computeBacklinks } from '../../../lib/wikilinks';
+import { computeLinkGraph } from '../../../lib/wikilinks';
+import NoteGraph from '../../../components/NoteGraph.astro';
 
 export async function getStaticPaths() {
   const notes = await getCollection('notes');
@@ -18,7 +19,9 @@ const { note } = Astro.props;
 const { Content } = await render(note);
 
 const allNotes = await getCollection('notes');
-const backlinks = computeBacklinks(allNotes).get(note.id) ?? [];
+const linkGraph = computeLinkGraph(allNotes);
+const outbound = linkGraph.outbound.get(note.id) ?? [];
+const backlinks = linkGraph.backlinks.get(note.id) ?? [];
 ---
 
 <BaseLayout title={`${note.data.title} — Knowledge Wiki`} description={note.data.description}>
@@ -43,14 +46,10 @@ const backlinks = computeBacklinks(allNotes).get(note.id) ?? [];
     <Content />
   </article>
 
-  {backlinks.length > 0 && (
+  {(outbound.length > 0 || backlinks.length > 0) && (
     <section class="related">
-      <h2>Linked from</h2>
-      <ul>
-        {backlinks.map((r) => (
-          <li><a href={`/notes/${r.data.domain}/${getNoteSlug(r.id, r.data.domain)}`}>{r.data.title}</a></li>
-        ))}
-      </ul>
+      <h2>Linked notes</h2>
+      <NoteGraph note={note} outbound={outbound} backlinks={backlinks} />
     </section>
   )}
 

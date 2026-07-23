@@ -19,4 +19,7 @@ Quality scores use Phred encoding: $Q = -10 \log_{10} P$, where $P$ is the estim
 probability the base call is wrong. Most modern platforms use Phred+33 offset, so
 `!` (ASCII 33) represents $Q = 0$.
 
+FASTQ is the raw-read format sequencers emit before alignment — the first artifact
+downstream of the [[Central Dogma]]'s transcription step in any sequencing experiment.
+
 Related tools to cover later: `fastqc`, `seqkit`, `cutadapt`.

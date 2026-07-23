@@ -14,3 +14,6 @@ in place keeps changes local and traceable.
 
 Worth expanding later: how this interacts with garbage collection cost, and where mutation
 is still the pragmatic choice (tight loops, large buffers).
+
+A common example in the wild: [[Cross-Entropy Loss]] and other loss functions are written
+as pure functions of `(prediction, target)`, never mutating either argument.

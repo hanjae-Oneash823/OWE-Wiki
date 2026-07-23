@@ -27,23 +27,36 @@ function extractWikilinkTargets(raw: string): string[] {
   return [...raw.matchAll(WIKILINK_PATTERN)].map((match) => match[1].trim());
 }
 
-/** Scans every note's raw body for [[wikilinks]] and returns, per note, which other notes link to it. */
-export function computeBacklinks(notes: Note[]): Map<string, Note[]> {
+export interface LinkGraph {
+  /** Notes each note links out to, resolved from its own [[wikilinks]]. */
+  outbound: Map<string, Note[]>;
+  /** Notes that link to each note — the reverse of outbound. */
+  backlinks: Map<string, Note[]>;
+}
+
+function addUnique(map: Map<string, Note[]>, key: string, note: Note): void {
+  const existing = map.get(key) ?? [];
+  if (existing.some((n) => n.id === note.id)) return;
+  map.set(key, [...existing, note]);
+}
+
+/** Scans every note's raw body for [[wikilinks]] once and builds both directions of the link graph. */
+export function computeLinkGraph(notes: Note[]): LinkGraph {
   const index = buildTitleIndex(notes);
+  const outbound = new Map<string, Note[]>();
   const backlinks = new Map<string, Note[]>();
 
   for (const note of notes) {
     const targets = extractWikilinkTargets(note.body ?? '');
-    const linkedNoteIds = new Set<string>();
 
     for (const target of targets) {
       const resolved = resolveWikilink(index, target);
-      if (!resolved || resolved.id === note.id || linkedNoteIds.has(resolved.id)) continue;
+      if (!resolved || resolved.id === note.id) continue;
 
-      linkedNoteIds.add(resolved.id);
-      backlinks.set(resolved.id, [...(backlinks.get(resolved.id) ?? []), note]);
+      addUnique(outbound, note.id, resolved);
+      addUnique(backlinks, resolved.id, note);
     }
   }
 
-  return backlinks;
+  return { outbound, backlinks };
 }

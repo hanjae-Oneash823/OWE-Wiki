@@ -20,3 +20,6 @@ only cares about the predicted probability assigned to the correct class, penali
 confident wrong answers heavily.
 
 To expand: relationship to KL divergence, label smoothing, and why it pairs with softmax.
+
+Loss functions are typically implemented as pure functions of `(prediction, target)` —
+the same [[Immutability]] preference that keeps a training loop's state easy to reason about.
