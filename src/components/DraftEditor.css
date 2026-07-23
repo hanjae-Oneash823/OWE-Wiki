@@ -3,69 +3,106 @@
 }
 
 .draft-editor-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  max-width: 70ch;
+  max-width: 92%;
+  margin: 0 auto;
 }
 
-.draft-editor-form > input,
-.draft-editor-form .editor-row select {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  padding: 0.5rem 0.65rem;
+.draft-toolbar {
+  position: sticky;
+  top: 3.6rem;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  margin-bottom: 1.5rem;
   background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.domain-picker {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.domain-picker:hover,
+.domain-picker:focus {
   color: var(--color-fg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 
-.draft-editor-form .editor-row {
+.draft-toolbar-actions {
   display: flex;
-  gap: 0.75rem;
+  align-items: baseline;
+  gap: 1rem;
 }
 
-.draft-editor-form .editor-row select {
-  flex: 1;
-}
-
-.block-editor-wrapper {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  min-height: 20rem;
-}
-
-.block-editor-wrapper .bn-editor {
-  padding: 0.75rem 0;
-}
-
-.editor-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.editor-actions button {
+.draft-toolbar-actions button {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   background: none;
-  border: 1px solid var(--color-fg);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 0.4rem 0.8rem;
+  padding: 0.35rem 0.75rem;
   color: var(--color-fg);
   cursor: pointer;
 }
 
-.editor-actions button:hover {
+.draft-toolbar-actions button:hover {
   border-color: var(--color-accent);
   color: var(--color-accent);
+}
+
+.draft-toolbar-actions button.primary {
+  border-color: var(--color-fg);
+}
+
+.draft-toolbar-actions button.primary:hover {
+  border-color: var(--color-accent);
 }
 
 .form-status {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--color-muted);
+}
+
+.draft-title-input {
+  display: block;
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 2em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0 0 2rem;
+  color: var(--color-fg);
+}
+
+.draft-title-input:focus {
+  outline: none;
+}
+
+.draft-title-input::placeholder {
+  color: var(--color-muted);
+}
+
+.block-editor-wrapper .bn-editor.bn-default-styles {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  padding-inline: 0;
 }
 
 /* Callout block */

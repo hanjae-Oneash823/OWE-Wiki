@@ -9,6 +9,13 @@ const draftId = Astro.params.id as string;
 ---
 
 <BaseLayout title="Edit draft — Knowledge Wiki">
-  <p><a href="/dashboard">&larr; Your drafts</a></p>
+  <p class="back-link"><a href="/dashboard">&larr; Your drafts</a></p>
   <DraftEditor client:only="react" draftId={draftId} domains={DOMAINS} />
 </BaseLayout>
+
+<style>
+  .back-link {
+    max-width: 92%;
+    margin: 0 auto 1rem;
+  }
+</style>
