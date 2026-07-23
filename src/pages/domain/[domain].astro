@@ -1,14 +1,9 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import NoteRow from '../../components/NoteRow.astro';
-import { DOMAINS } from '../../content.config';
-
-export async function getStaticPaths() {
-  return DOMAINS.map((domain) => ({ params: { domain } }));
-}
 
 const { domain } = Astro.params;
 const allNotes = await getCollection('notes');

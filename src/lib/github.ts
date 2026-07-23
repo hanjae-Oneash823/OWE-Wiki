@@ -9,6 +9,7 @@ interface PublishNoteParams {
   title: string;
   content: string;
   publishedDate: string;
+  coverImage?: string | null;
 }
 
 function buildMdx(params: PublishNoteParams): string {
@@ -17,6 +18,7 @@ function buildMdx(params: PublishNoteParams): string {
     `noteId: ${params.noteId}`,
     `title: ${JSON.stringify(params.title)}`,
     `domain: ${params.domain}`,
+    ...(params.coverImage ? [`image: ${JSON.stringify(params.coverImage)}`] : []),
     'tags: []',
     'aliases: []',
     `publishedDate: ${params.publishedDate}`,
@@ -158,4 +160,51 @@ export async function renameNoteOnGitHub(params: RenameNoteParams): Promise<Rena
   }
 
   return { href: `/notes/${params.domain}/${newSlug}` };
+}
+
+/**
+ * Moves every listed note from one domain's directory to another, updating each file's
+ * `domain` frontmatter field. Used for both domain renames and delete-with-move — the
+ * caller is responsible for the collision preflight (comparing in-memory note lists) since
+ * that doesn't require any GitHub calls.
+ */
+export async function moveNotesBetweenDomains(fromDomain: string, toDomain: string, notes: { slug: string }[]): Promise<void> {
+  const { token, owner, repo, branch } = getRepoConfig();
+  const octokit = new Octokit({ auth: token });
+
+  for (const { slug } of notes) {
+    const oldPath = `src/content/notes/${fromDomain}/${slug}.mdx`;
+    const newPath = `src/content/notes/${toDomain}/${slug}.mdx`;
+
+    const { data: fileData } = await octokit.rest.repos.getContent({ owner, repo, path: oldPath, ref: branch });
+    if (Array.isArray(fileData) || fileData.type !== 'file' || !('content' in fileData)) {
+      throw new Error(`Note not found at ${oldPath}`);
+    }
+
+    const raw = Buffer.from(fileData.content, 'base64').toString('utf-8');
+    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+    if (!match) throw new Error(`Note not found at ${oldPath}`);
+
+    const [, frontmatterBlock, body] = match;
+    const frontmatter = parseYaml(frontmatterBlock) as Record<string, unknown>;
+    const updatedFrontmatter = { ...frontmatter, domain: toDomain };
+
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: newPath,
+      branch,
+      message: `Move note to domain "${toDomain}": ${slug}`,
+      content: Buffer.from(buildRenamedMdx(updatedFrontmatter, body), 'utf-8').toString('base64'),
+    });
+
+    await octokit.rest.repos.deleteFile({
+      owner,
+      repo,
+      path: oldPath,
+      branch,
+      message: `Remove old path after domain move: ${slug}`,
+      sha: fileData.sha,
+    });
+  }
 }

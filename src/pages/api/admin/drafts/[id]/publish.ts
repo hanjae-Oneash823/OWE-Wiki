@@ -37,6 +37,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       slug: draft.slug,
       content: draft.content,
       publishedDate,
+      coverImage: draft.cover_image,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to publish to GitHub';

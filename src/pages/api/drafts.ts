@@ -3,7 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 import { canWrite, getUserRole } from '../../lib/supabase/roles';
-import { DOMAINS } from '../../content.config';
+import { getDomains } from '../../lib/domains';
 import { slugify } from '../../lib/slugify';
 
 const MAX_DRAFTS_PER_DAY = 5;
@@ -27,7 +27,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const body = await request.json().catch(() => ({}));
   const trimmedTitle = typeof body.title === 'string' ? body.title.trim() : '';
   const title = trimmedTitle || 'Untitled draft';
-  const domain = typeof body.domain === 'string' && DOMAINS.includes(body.domain) ? body.domain : DOMAINS[0];
   const content = body.content;
 
   const supabase = createSupabaseServerClient(request, cookies);
@@ -36,6 +35,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const role = await getUserRole(supabase, userData.user.id);
   if (!canWrite(role)) return new Response(JSON.stringify({ error: 'Writer access required' }), { status: 403 });
+
+  const domains = await getDomains(supabase);
+  if (domains.length === 0) {
+    return new Response(JSON.stringify({ error: 'No domains are configured yet' }), { status: 409 });
+  }
+  const domainSlugs = domains.map(({ slug }) => slug);
+  const domain = typeof body.domain === 'string' && domainSlugs.includes(body.domain) ? body.domain : domainSlugs[0];
 
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);

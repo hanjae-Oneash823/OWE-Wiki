@@ -26,6 +26,7 @@ interface DraftRecord {
   domain: string;
   content: string | null;
   content_json: unknown;
+  cover_image: string | null;
 }
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -53,6 +54,8 @@ export default function DraftEditor({ draftId, domains }: DraftEditorProps) {
   const [errorMessage, setErrorMessage] = useState('');
   const [title, setTitle] = useState('');
   const [domain, setDomain] = useState<string>(domains[0]);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
 
   const editor = useCreateBlockNote({
@@ -81,6 +84,7 @@ export default function DraftEditor({ draftId, domains }: DraftEditorProps) {
 
       setTitle(draft.title);
       setDomain(draft.domain);
+      setCoverImage(draft.cover_image);
 
       // Prefer the native block document: plain Markdown can't represent image
       // resize/alignment/crop, so `content` alone would reset them on every reload.
@@ -117,6 +121,29 @@ export default function DraftEditor({ draftId, domains }: DraftEditorProps) {
     }
   }
 
+  async function handleCoverFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    setIsUploadingCover(true);
+    try {
+      const compressed = await compressImage(file);
+      const url = await uploadImageBlob(compressed);
+      setCoverImage(url);
+      await save({ coverImage: url });
+    } catch (error) {
+      setSaveStatus(error instanceof Error ? error.message : 'Failed to upload cover image');
+    } finally {
+      setIsUploadingCover(false);
+    }
+  }
+
+  async function removeCover() {
+    setCoverImage(null);
+    await save({ coverImage: null });
+  }
+
   if (loadState === 'error') {
     return <p className="gate-message">{errorMessage}</p>;
   }
@@ -148,6 +175,25 @@ export default function DraftEditor({ draftId, domains }: DraftEditorProps) {
             </button>
           </div>
         </div>
+        {coverImage ? (
+          <div className="draft-cover">
+            <img src={coverImage} alt="" className="draft-cover-image" />
+            <div className="draft-cover-controls">
+              <label className="draft-cover-button">
+                {isUploadingCover ? 'Uploading…' : 'Change cover'}
+                <input type="file" accept="image/*" onChange={handleCoverFileChange} disabled={isUploadingCover} hidden />
+              </label>
+              <button type="button" className="draft-cover-button" onClick={removeCover} disabled={isUploadingCover}>
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <label className="draft-add-cover">
+            {isUploadingCover ? 'Uploading…' : '+ Add cover'}
+            <input type="file" accept="image/*" onChange={handleCoverFileChange} disabled={isUploadingCover} hidden />
+          </label>
+        )}
         <input
           type="text"
           className="draft-title-input"

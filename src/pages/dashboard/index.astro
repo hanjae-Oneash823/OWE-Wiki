@@ -48,6 +48,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <button type="button" class="tab-btn" data-tab="audit" role="tab">
           Audit log
         </button>
+        <button type="button" class="tab-btn" data-tab="domains" role="tab">
+          Domains
+        </button>
       </div>
 
       <section class="tab-panel dash-card" data-panel="drafts">
@@ -69,6 +72,16 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       <section class="tab-panel dash-card" data-panel="audit" hidden>
         <ul id="audit-log-list" class="admin-list"></ul>
       </section>
+
+      <section class="tab-panel dash-card" data-panel="domains" hidden>
+        <form id="add-domain-form" class="add-domain-form">
+          <input type="text" id="add-domain-slug" placeholder="slug (e.g. physics)" required maxlength="60" />
+          <input type="text" id="add-domain-description" placeholder="Description (optional)" maxlength="300" />
+          <button type="submit">Add domain</button>
+        </form>
+        <p id="add-domain-status" class="form-status"></p>
+        <ul id="domains-list" class="admin-list"></ul>
+      </section>
     </div>
   </div>
 </BaseLayout>
@@ -89,6 +102,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   const roleRequestsList = document.getElementById('role-requests-list');
   const commentsList = document.getElementById('comments-list');
   const auditLogList = document.getElementById('audit-log-list');
+  const domainsList = document.getElementById('domains-list');
+  const addDomainForm = document.getElementById('add-domain-form');
+  const addDomainSlug = document.getElementById('add-domain-slug');
+  const addDomainDescription = document.getElementById('add-domain-description');
+  const addDomainStatus = document.getElementById('add-domain-status');
 
   const tabBar = document.getElementById('tab-bar');
 
@@ -467,6 +485,167 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     }
   }
 
+  async function loadDomains() {
+    if (!domainsList) return;
+    const response = await fetch('/api/admin/domains');
+    const { domains } = await response.json();
+    domainsList.replaceChildren();
+
+    if (!domains || domains.length === 0) {
+      domainsList.append(emptyItem('No domains yet.'));
+      return;
+    }
+
+    for (const domain of domains) {
+      const item = document.createElement('li');
+      item.className = 'admin-row admin-row-wrap';
+
+      const meta = document.createElement('div');
+      meta.className = 'admin-row-meta';
+      const title = document.createElement('span');
+      title.className = 'admin-row-title';
+      title.textContent = domain.slug;
+      const sub = document.createElement('span');
+      sub.className = 'admin-row-sub';
+      const descPart = domain.description ? ` · ${domain.description}` : '';
+      sub.textContent = `${domain.noteCount} notes · ${domain.draftCount} drafts${descPart}`;
+      meta.append(title, sub);
+
+      const editBtn = actionButton('Edit', () => showEditForm());
+      const deleteBtn = actionButton('Delete', () => showDeleteControls());
+      const actions = document.createElement('div');
+      actions.className = 'admin-row-actions';
+      actions.append(editBtn, deleteBtn);
+
+      const editForm = document.createElement('form');
+      editForm.className = 'domain-edit-form';
+      editForm.hidden = true;
+      const slugInput = document.createElement('input');
+      slugInput.type = 'text';
+      slugInput.value = domain.slug;
+      slugInput.required = true;
+      const descInput = document.createElement('input');
+      descInput.type = 'text';
+      descInput.value = domain.description ?? '';
+      descInput.placeholder = 'Description';
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'submit';
+      saveBtn.textContent = 'Save';
+      const cancelEditBtn = document.createElement('button');
+      cancelEditBtn.type = 'button';
+      cancelEditBtn.textContent = 'Cancel';
+      editForm.append(slugInput, descInput, saveBtn, cancelEditBtn);
+
+      const editStatus = document.createElement('p');
+      editStatus.className = 'form-status';
+
+      const deleteControls = document.createElement('div');
+      deleteControls.className = 'domain-delete-controls';
+      deleteControls.hidden = true;
+
+      const modeOrphan = document.createElement('label');
+      const orphanRadio = document.createElement('input');
+      orphanRadio.type = 'radio';
+      orphanRadio.name = `delete-mode-${domain.slug}`;
+      orphanRadio.value = 'orphan';
+      orphanRadio.checked = true;
+      modeOrphan.append(orphanRadio, ' Leave notes orphaned');
+
+      const modeMove = document.createElement('label');
+      const moveRadio = document.createElement('input');
+      moveRadio.type = 'radio';
+      moveRadio.name = `delete-mode-${domain.slug}`;
+      moveRadio.value = 'move';
+      const targetSelect = document.createElement('select');
+      for (const other of domains) {
+        if (other.slug === domain.slug) continue;
+        const option = document.createElement('option');
+        option.value = other.slug;
+        option.textContent = other.slug;
+        targetSelect.append(option);
+      }
+      modeMove.append(moveRadio, ' Move notes to: ', targetSelect);
+
+      const confirmDeleteBtn = document.createElement('button');
+      confirmDeleteBtn.type = 'button';
+      confirmDeleteBtn.textContent = 'Confirm delete';
+      const cancelDeleteBtn = document.createElement('button');
+      cancelDeleteBtn.type = 'button';
+      cancelDeleteBtn.textContent = 'Cancel';
+
+      const deleteStatus = document.createElement('p');
+      deleteStatus.className = 'form-status';
+
+      deleteControls.append(modeOrphan, modeMove, confirmDeleteBtn, cancelDeleteBtn, deleteStatus);
+
+      function showEditForm() {
+        editForm.hidden = false;
+        deleteControls.hidden = true;
+        actions.hidden = true;
+      }
+
+      function showDeleteControls() {
+        deleteControls.hidden = false;
+        editForm.hidden = true;
+        actions.hidden = true;
+      }
+
+      function showRow() {
+        editForm.hidden = true;
+        deleteControls.hidden = true;
+        actions.hidden = false;
+        editStatus.textContent = '';
+        deleteStatus.textContent = '';
+      }
+
+      cancelEditBtn.addEventListener('click', showRow);
+      cancelDeleteBtn.addEventListener('click', showRow);
+
+      editForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const newSlug = slugInput.value.trim();
+        const description = descInput.value.trim();
+        editStatus.textContent = 'Saving…';
+        const res = await fetch(`/api/admin/domains/${domain.slug}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newSlug, description }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          editStatus.textContent = data.error ?? 'Failed to update domain';
+          return;
+        }
+        await loadDomains();
+      });
+
+      confirmDeleteBtn.addEventListener('click', async () => {
+        const mode = moveRadio.checked ? 'move' : 'orphan';
+        const confirmMessage =
+          mode === 'move'
+            ? `Delete domain "${domain.slug}" and move its notes to "${targetSelect.value}"?`
+            : `Delete domain "${domain.slug}" and leave its notes/drafts orphaned under that slug?`;
+        if (!confirm(confirmMessage)) return;
+
+        deleteStatus.textContent = 'Deleting…';
+        const res = await fetch(`/api/admin/domains/${domain.slug}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode, targetDomain: targetSelect.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          deleteStatus.textContent = data.error ?? 'Failed to delete domain';
+          return;
+        }
+        await loadDomains();
+      });
+
+      item.append(meta, actions, editForm, editStatus, deleteControls);
+      domainsList.append(item);
+    }
+  }
+
   async function refreshAdmin() {
     const [draftsCount, revisionsCount, rolesCount, commentsCount] = await Promise.all([
       loadAdminDrafts(),
@@ -475,6 +654,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       loadComments(),
     ]);
     await loadAuditLog();
+    await loadDomains();
 
     setTabCount('count-drafts', draftsCount);
     setTabCount('count-revisions', revisionsCount);
@@ -537,6 +717,32 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
       }
     }
   });
+
+  if (addDomainForm instanceof HTMLFormElement) {
+    addDomainForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!(addDomainSlug instanceof HTMLInputElement)) return;
+
+      const slug = addDomainSlug.value.trim();
+      const description = addDomainDescription instanceof HTMLInputElement ? addDomainDescription.value.trim() : '';
+
+      if (addDomainStatus) addDomainStatus.textContent = 'Adding…';
+      const res = await fetch('/api/admin/domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, description }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (addDomainStatus) addDomainStatus.textContent = data.error ?? 'Failed to add domain';
+        return;
+      }
+
+      addDomainForm.reset();
+      if (addDomainStatus) addDomainStatus.textContent = '';
+      await loadDomains();
+    });
+  }
 
   init();
 </script>
@@ -888,5 +1094,72 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   .admin-row button:hover {
     border-color: var(--brand-red);
     color: var(--brand-red);
+  }
+
+  .add-domain-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .domain-edit-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .domain-delete-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .domain-delete-controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--color-fg);
+  }
+
+  .add-domain-form input,
+  .domain-edit-form input,
+  .domain-delete-controls select {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .add-domain-form button,
+  .domain-edit-form button,
+  .domain-delete-controls button {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: none;
+    border: 1px solid var(--color-fg);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.8rem;
+    color: var(--color-fg);
+    cursor: pointer;
+  }
+
+  .add-domain-form button:hover,
+  .domain-edit-form button:hover,
+  .domain-delete-controls button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
   }
 </style>

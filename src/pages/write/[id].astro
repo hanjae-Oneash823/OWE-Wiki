@@ -3,14 +3,18 @@ export const prerender = false;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import DraftEditor from '../../components/DraftEditor';
-import { DOMAINS } from '../../content.config';
+import { getDomains } from '../../lib/domains';
+import { createSupabaseServerClient } from '../../lib/supabase/server';
 
 const draftId = Astro.params.id as string;
+const supabase = createSupabaseServerClient(Astro.request, Astro.cookies);
+const domains = await getDomains(supabase);
+const domainSlugs = domains.map(({ slug }) => slug);
 ---
 
 <BaseLayout title="Edit draft — Knowledge Wiki">
   <p class="back-link"><a href="/dashboard">&larr; Your drafts</a></p>
-  <DraftEditor client:only="react" draftId={draftId} domains={DOMAINS} />
+  <DraftEditor client:only="react" draftId={draftId} domains={domainSlugs} />
 </BaseLayout>
 
 <style>

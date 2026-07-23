@@ -1,21 +1,33 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import GraphView from '../../components/GraphView';
 import { buildGraphData } from '../../lib/wikilinks';
-import { DOMAINS } from '../../content.config';
+import { getDomains } from '../../lib/domains';
+import { createSupabaseServerClient } from '../../lib/supabase/server';
+
+const supabase = createSupabaseServerClient(Astro.request, Astro.cookies);
+const domains = await getDomains(supabase);
+const domainSlugs = domains.map(({ slug }) => slug);
 
 const notes = await getCollection('notes');
 const { nodes, edges } = buildGraphData(notes);
 
 const linkedIds = new Set(edges.flatMap((edge) => [edge.source, edge.target]));
 const orphans = nodes.filter((node) => !linkedIds.has(node.id));
+
+// Deterministic per-domain color, spread across the wheel via the golden angle so any
+// number of domains stays visually distinct without hand-picked hex values.
+const GOLDEN_ANGLE = 137.5;
+const domainColorVars = domainSlugs
+  .map((slug, index) => `--domain-${slug}: hsl(${(index * GOLDEN_ANGLE) % 360}, 55%, 45%);`)
+  .join(' ');
 ---
 
 <BaseLayout title="Graph — Knowledge Wiki" description="A domain-clustered map of every note and how they connect.">
-  <div class="graph-page">
+  <div class="graph-page" style={domainColorVars}>
     <p class="back-link"><a href="/">&larr; Home</a></p>
     <h1>Knowledge graph</h1>
     <p class="graph-intro">
@@ -26,7 +38,7 @@ const orphans = nodes.filter((node) => !linkedIds.has(node.id));
     {nodes.length === 0 ? (
       <p>No notes published yet.</p>
     ) : (
-      <GraphView client:only="react" nodes={nodes} edges={edges} domains={DOMAINS} />
+      <GraphView client:only="react" nodes={nodes} edges={edges} domains={domainSlugs} />
     )}
 
     {orphans.length > 0 && (
@@ -50,10 +62,6 @@ const orphans = nodes.filter((node) => !linkedIds.has(node.id));
   .graph-page {
     max-width: 960px;
     margin: 0 auto;
-    --domain-coding: var(--color-accent);
-    --domain-bioinformatics: #3b6ea0;
-    --domain-biology: #b8860b;
-    --domain-ml-dl-ai: #6a4c93;
   }
 
   .graph-intro {

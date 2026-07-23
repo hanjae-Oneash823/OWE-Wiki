@@ -30,6 +30,9 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
   if ('contentJson' in body) {
     updates.content_json = body.contentJson;
   }
+  if ('coverImage' in body) {
+    updates.cover_image = body.coverImage;
+  }
 
   const { error } = await supabase.from('drafts').update(updates).eq('id', params.id);
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400 });

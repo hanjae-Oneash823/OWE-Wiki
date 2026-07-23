@@ -1,12 +1,16 @@
 ---
-export const prerender = true;
+export const prerender = false;
 
 import { getCollection } from 'astro:content';
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ArticleCard from '../components/ArticleCard.astro';
 import darwinTree from '../assets/darwin-tree.png';
-import { DOMAINS } from '../content.config';
+import { getDomains } from '../lib/domains';
+import { createSupabaseServerClient } from '../lib/supabase/server';
+
+const supabase = createSupabaseServerClient(Astro.request, Astro.cookies);
+const domains = await getDomains(supabase);
 
 const notes = await getCollection('notes');
 const recentNotes = [...notes]
@@ -14,7 +18,7 @@ const recentNotes = [...notes]
   .slice(0, 10);
 
 const domainCounts = Object.fromEntries(
-  DOMAINS.map((domain) => [domain, notes.filter((note) => note.data.domain === domain).length])
+  domains.map(({ slug }) => [slug, notes.filter((note) => note.data.domain === slug).length])
 );
 
 const descendantText =
@@ -80,10 +84,10 @@ const heroHotspots = [
     <section>
       <h2>Domains</h2>
       <ul class="domain-list">
-        {DOMAINS.map((domain) => (
+        {domains.map(({ slug }) => (
           <li class="domain-row">
-            <a href={`/domain/${domain}`}>{domain}</a>
-            <span class="count">{String(domainCounts[domain]).padStart(2, '0')}</span>
+            <a href={`/domain/${slug}`}>{slug}</a>
+            <span class="count">{String(domainCounts[slug]).padStart(2, '0')}</span>
           </li>
         ))}
       </ul>

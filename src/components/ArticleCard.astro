@@ -12,7 +12,7 @@ const dateLabel = note.data.publishedDate.toISOString().slice(0, 10);
 ---
 
 <a class="article-card" href={href}>
-  <div class="article-card__image">
+  <div class={`article-card__image ${note.data.image ? 'article-card__image--cover' : ''}`}>
     {note.data.image ? (
       <img src={note.data.image} alt="" loading="lazy" />
     ) : (
@@ -37,6 +37,10 @@ const dateLabel = note.data.publishedDate.toISOString().slice(0, 10);
     aspect-ratio: 1 / 1;
     border: 1px solid var(--color-border);
     overflow: hidden;
+  }
+
+  .article-card__image--cover {
+    border-color: #000;
   }
 
   .article-card__image img {
