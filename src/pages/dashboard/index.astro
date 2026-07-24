@@ -223,9 +223,18 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
       const image = document.createElement('div');
       image.className = 'draft-card__image';
-      const placeholder = document.createElement('div');
-      placeholder.className = 'draft-card__placeholder';
-      image.append(placeholder);
+      if (draft.cover_image) {
+        image.classList.add('draft-card__image--cover');
+        const img = document.createElement('img');
+        img.src = draft.cover_image;
+        img.alt = '';
+        img.loading = 'lazy';
+        image.append(img);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'draft-card__placeholder';
+        image.append(placeholder);
+      }
 
       const date = document.createElement('span');
       date.className = 'draft-card__date';
@@ -881,6 +890,17 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     aspect-ratio: 1 / 1;
     border: 1px solid var(--color-border);
     overflow: hidden;
+  }
+
+  .draft-card__image--cover {
+    border-color: #000;
+  }
+
+  .draft-card__image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .draft-card__placeholder {
