@@ -5,6 +5,8 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import NoteRow from '../../components/NoteRow.astro';
 
+Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+
 const { domain } = Astro.params;
 const allNotes = await getCollection('notes');
 const notes = allNotes

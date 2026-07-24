@@ -8,6 +8,8 @@ import { buildGraphData } from '../../lib/wikilinks';
 import { getDomains } from '../../lib/domains';
 import { createSupabaseServerClient } from '../../lib/supabase/server';
 
+Astro.response.headers.set('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+
 const supabase = createSupabaseServerClient(Astro.request, Astro.cookies);
 const domains = await getDomains(supabase);
 const domainSlugs = domains.map(({ slug }) => slug);
